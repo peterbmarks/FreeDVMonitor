@@ -1,0 +1,5 @@
+build-linux/
+build-win/
+deps/
+*.exe
+*.dll

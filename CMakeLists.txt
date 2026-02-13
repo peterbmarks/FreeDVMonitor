@@ -47,6 +47,7 @@ if(CMAKE_CROSSCOMPILING AND WIN32)
         cairo gdk_pixbuf-2.0 atk-1.0
         epoxy harfbuzz fribidi fontconfig freetype
         intl z png16 pixman-1
+        portaudio
     )
 
     # GTK3 DLLs needed at runtime
@@ -96,6 +97,7 @@ if(CMAKE_CROSSCOMPILING AND WIN32)
         libgcc_s_seh-1.dll
         libstdc++-6.dll
         libwinpthread-1.dll
+        libportaudio.dll
     )
 
     # Copy required DLLs next to the exe after every build
@@ -128,9 +130,14 @@ else()
     # Native build: use system GTK3 via pkg-config
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+    pkg_check_modules(PORTAUDIO REQUIRED portaudio-2)
 
-    target_include_directories(${PROJECT_NAME} PRIVATE ${GTK3_INCLUDE_DIRS})
-    target_link_directories(${PROJECT_NAME} PRIVATE ${GTK3_LIBRARY_DIRS})
-    target_link_libraries(${PROJECT_NAME} PRIVATE ${GTK3_LIBRARIES})
-    target_compile_options(${PROJECT_NAME} PRIVATE ${GTK3_CFLAGS_OTHER})
+    target_include_directories(${PROJECT_NAME} PRIVATE
+        ${GTK3_INCLUDE_DIRS} ${PORTAUDIO_INCLUDE_DIRS})
+    target_link_directories(${PROJECT_NAME} PRIVATE
+        ${GTK3_LIBRARY_DIRS} ${PORTAUDIO_LIBRARY_DIRS})
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        ${GTK3_LIBRARIES} ${PORTAUDIO_LIBRARIES})
+    target_compile_options(${PROJECT_NAME} PRIVATE
+        ${GTK3_CFLAGS_OTHER} ${PORTAUDIO_CFLAGS_OTHER})
 endif()

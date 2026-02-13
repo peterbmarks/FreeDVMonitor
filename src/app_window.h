@@ -6,6 +6,8 @@
 struct AppWindow {
     GtkWidget *window;
     GtkWidget *header_label;
+    GtkWidget *audio_combo;
+    GtkWidget *refresh_button;
     GtkWidget *text_entry;
     GtkWidget *send_button;
     GtkWidget *clear_button;

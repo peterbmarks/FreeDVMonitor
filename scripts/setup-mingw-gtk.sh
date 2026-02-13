@@ -52,6 +52,7 @@ PACKAGES=(
     "mingw-w64-x86_64-xz=5.8.2-1"
     "mingw-w64-x86_64-libwebp=1.6.0-1"
     "mingw-w64-x86_64-zstd=1.5.7-1"
+    "mingw-w64-x86_64-portaudio=1~19.7.0-4"
 )
 
 # Check for required tools

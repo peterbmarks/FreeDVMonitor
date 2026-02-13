@@ -130,7 +130,7 @@ else()
     # Native build: use system GTK3 via pkg-config
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
-    pkg_check_modules(PORTAUDIO REQUIRED portaudio-2)
+    pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
 
     target_include_directories(${PROJECT_NAME} PRIVATE
         ${GTK3_INCLUDE_DIRS} ${PORTAUDIO_INCLUDE_DIRS})

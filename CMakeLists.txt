@@ -19,6 +19,10 @@ if(CMAKE_CROSSCOMPILING AND WIN32)
     # Suppress console window on Windows
     set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
 
+    # Statically link the MinGW C/C++ runtime so we don't need
+    # libgcc_s_seh-1.dll, libstdc++-6.dll, or libwinpthread-1.dll
+    target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++ -Wl,-Bstatic -lpthread -Wl,-Bdynamic)
+
     target_include_directories(${PROJECT_NAME} PRIVATE
         ${GTK3_PREFIX}/include/gtk-3.0
         ${GTK3_PREFIX}/include/glib-2.0
@@ -45,12 +49,78 @@ if(CMAKE_CROSSCOMPILING AND WIN32)
         intl z png16 pixman-1
     )
 
-    # Bundle DLLs on install
-    install(TARGETS ${PROJECT_NAME} DESTINATION bin)
-    file(GLOB GTK3_DLLS "${GTK3_PREFIX}/bin/*.dll")
-    install(FILES ${GTK3_DLLS} DESTINATION bin)
+    # GTK3 DLLs needed at runtime
+    set(GTK3_RUNTIME_DLLS
+        libatk-1.0-0.dll
+        libbrotlicommon.dll
+        libbrotlidec.dll
+        libbz2-1.dll
+        libcairo-2.dll
+        libcairo-gobject-2.dll
+        libepoxy-0.dll
+        libexpat-1.dll
+        libffi-8.dll
+        libfontconfig-1.dll
+        libfreetype-6.dll
+        libfribidi-0.dll
+        libgdk-3-0.dll
+        libgdk_pixbuf-2.0-0.dll
+        libgio-2.0-0.dll
+        libglib-2.0-0.dll
+        libgmodule-2.0-0.dll
+        libgobject-2.0-0.dll
+        libgraphite2.dll
+        libgtk-3-0.dll
+        libharfbuzz-0.dll
+        libintl-8.dll
+        libjpeg-8.dll
+        libdatrie-1.dll
+        libthai-0.dll
+        libpango-1.0-0.dll
+        libpangocairo-1.0-0.dll
+        libpangoft2-1.0-0.dll
+        libpangowin32-1.0-0.dll
+        libpcre2-8-0.dll
+        libpixman-1-0.dll
+        libpng16-16.dll
+        libtiff-6.dll
+        libdeflate.dll
+        libjbig-0.dll
+        libLerc.dll
+        liblzma-5.dll
+        libsharpyuv-0.dll
+        libwebp-7.dll
+        libzstd.dll
+        zlib1.dll
+        libiconv-2.dll
+        libgcc_s_seh-1.dll
+        libstdc++-6.dll
+        libwinpthread-1.dll
+    )
 
-    # Copy share directory (icons, schemas) for GTK runtime
+    # Copy required DLLs next to the exe after every build
+    foreach(DLL ${GTK3_RUNTIME_DLLS})
+        set(DLL_SRC "${GTK3_PREFIX}/bin/${DLL}")
+        if(EXISTS "${DLL_SRC}")
+            add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${DLL_SRC}" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/${DLL}"
+                COMMENT "Copying ${DLL}"
+            )
+        else()
+            message(WARNING "DLL not found: ${DLL_SRC}")
+        endif()
+    endforeach()
+
+    # Install target for packaging
+    install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+    foreach(DLL ${GTK3_RUNTIME_DLLS})
+        set(DLL_SRC "${GTK3_PREFIX}/bin/${DLL}")
+        if(EXISTS "${DLL_SRC}")
+            install(FILES "${DLL_SRC}" DESTINATION bin)
+        endif()
+    endforeach()
+
     if(EXISTS "${GTK3_PREFIX}/share")
         install(DIRECTORY "${GTK3_PREFIX}/share/" DESTINATION share)
     endif()

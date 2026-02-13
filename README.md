@@ -63,20 +63,17 @@ cmake --build build-linux
 
 ## Running the Windows Executable
 
-Copy the following to the same directory as `FreeDVMonitor.exe`:
+The build is self-contained: the MinGW C/C++ runtime is statically linked
+into the executable, and all required GTK3 DLLs are automatically copied into
+`build-win/` alongside the `.exe` as a post-build step. No manual DLL
+gathering is needed.
 
-- All `.dll` files from `deps/mingw64/bin/`
-- MinGW-w64 runtime DLLs from your system:
-  - `libstdc++-6.dll`
-  - `libgcc_s_seh-1.dll`
-  - `libwinpthread-1.dll`
-
-  These are typically found in `/usr/lib/gcc/x86_64-w64-mingw32/13-win32/`.
+To distribute, copy the entire `build-win/` directory to a Windows machine
+(or use `cmake --install build-win --prefix <dest>` for a clean layout).
 
 You can also test with Wine on Linux:
 
 ```bash
-export WINEPATH="deps/mingw64/bin;/usr/lib/gcc/x86_64-w64-mingw32/13-win32"
 wine build-win/FreeDVMonitor.exe
 ```
 
@@ -96,7 +93,10 @@ CMakeLists.txt detects whether it is cross-compiling:
   pointing to the downloaded MSYS2 packages in `deps/mingw64/`. The
   toolchain file (`cmake/mingw-w64-x86_64.cmake`) tells CMake to use the
   mingw-w64 compiler and restricts library search paths to the cross-compile
-  sysroot.
+  sysroot. The MinGW C/C++ runtime (`libgcc`, `libstdc++`, `libwinpthread`)
+  is statically linked so those DLLs are not needed. GTK3 and its
+  dependencies remain dynamically linked and the required DLLs are
+  automatically copied next to the `.exe` after each build.
 
 ### GTK3 Windows dependencies
 

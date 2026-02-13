@@ -40,6 +40,18 @@ PACKAGES=(
     "mingw-w64-x86_64-bzip2=1.0.8-3"
     "mingw-w64-x86_64-brotli=1.2.0-1"
     "mingw-w64-x86_64-zlib=1.3.1-1"
+    "mingw-w64-x86_64-libffi=3.5.2-1"
+    "mingw-w64-x86_64-libthai=0.1.30-1"
+    "mingw-w64-x86_64-libdatrie=0.2.14-1"
+    "mingw-w64-x86_64-libiconv=1.18-1"
+    "mingw-w64-x86_64-gcc-libs=15.2.0-11"
+    "mingw-w64-x86_64-libwinpthread=13.0.0.r505.g7d006b2ea-1"
+    "mingw-w64-x86_64-libdeflate=1.25-1"
+    "mingw-w64-x86_64-jbigkit=2.1-5"
+    "mingw-w64-x86_64-lerc=4.0.0-1"
+    "mingw-w64-x86_64-xz=5.8.2-1"
+    "mingw-w64-x86_64-libwebp=1.6.0-1"
+    "mingw-w64-x86_64-zstd=1.5.7-1"
 )
 
 # Check for required tools

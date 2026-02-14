@@ -58,6 +58,8 @@ private:
     PaStream*     pa_out_  = nullptr;
     unsigned int  rate_in_  = 0;   // capture sample rate
     unsigned int  rate_out_ = 0;   // playback sample rate
+    PaSampleFormat fmt_in_  = paFloat32;  // capture sample format
+    PaSampleFormat fmt_out_ = paFloat32;  // playback sample format
     bool          pa_initialized_ = false;
 
     /* ── RADE receiver (opaque) ───────────────────────────────────────────── */

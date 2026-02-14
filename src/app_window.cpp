@@ -1,11 +1,41 @@
 #include "app_window.h"
 #include <portaudio.h>
 #include <string>
+#ifdef __linux__
+#include <unistd.h>
+#include <fcntl.h>
+#endif
+
+// Suppress noisy ALSA warnings on Linux (e.g. "Unable to find definition")
+static int saved_stderr_fd = -1;
+
+static void suppress_stderr(bool suppress) {
+#ifdef __linux__
+    if (suppress) {
+        fflush(stderr);
+        saved_stderr_fd = dup(STDERR_FILENO);
+        int devnull = open("/dev/null", O_WRONLY);
+        if (devnull >= 0) {
+            dup2(devnull, STDERR_FILENO);
+            close(devnull);
+        }
+    } else if (saved_stderr_fd >= 0) {
+        fflush(stderr);
+        dup2(saved_stderr_fd, STDERR_FILENO);
+        close(saved_stderr_fd);
+        saved_stderr_fd = -1;
+    }
+#else
+    (void)suppress;
+#endif
+}
 
 static void populate_audio_inputs(AppWindow *win) {
     gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(win->audio_combo));
 
+    suppress_stderr(true);
     PaError err = Pa_Initialize();
+    suppress_stderr(false);
     if (err != paNoError) {
         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->audio_combo),
                                        "(PortAudio init failed)");
@@ -78,7 +108,9 @@ static void on_start_clicked(GtkWidget * /*widget*/, gpointer data) {
     g_free(text);
 
     /* Look up PortAudio device index by name */
+    suppress_stderr(true);
     Pa_Initialize();
+    suppress_stderr(false);
     int dev_index = RadaeDecoder::find_device_by_name(dev_name);
     Pa_Terminate();
 
@@ -143,6 +175,7 @@ AppWindow *app_window_new(GtkApplication *app) {
     gtk_box_pack_start(GTK_BOX(audio_box), audio_label, FALSE, FALSE, 0);
 
     win->audio_combo = gtk_combo_box_text_new();
+    gtk_widget_set_size_request(win->audio_combo, 50, -1);  // allow shrinking
     gtk_box_pack_start(GTK_BOX(audio_box), win->audio_combo, TRUE, TRUE, 0);
     g_signal_connect(win->audio_combo, "changed", G_CALLBACK(on_audio_combo_changed), win);
 

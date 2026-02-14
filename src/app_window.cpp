@@ -166,6 +166,38 @@ static gboolean on_waterfall_timer(gpointer data) {
     return G_SOURCE_CONTINUE;
 }
 
+/* ── Status bar update timer ────────────────────────────────────────── */
+
+static gboolean on_status_timer(gpointer data) {
+    auto *win = static_cast<AppWindow *>(data);
+    if (!win->decoder.is_running())
+        return G_SOURCE_CONTINUE;
+
+    char buf[128];
+    if (win->decoder.is_synced()) {
+        snprintf(buf, sizeof(buf), "SYNC | SNR: %.1f dB | Freq Offset: %.1f Hz",
+                 win->decoder.snr_dB(), win->decoder.freq_offset());
+    } else {
+        snprintf(buf, sizeof(buf), "Searching...");
+    }
+
+    gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->statusbar_context);
+    gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context, buf);
+    return G_SOURCE_CONTINUE;
+}
+
+static void status_timer_start(AppWindow *win) {
+    if (win->status_timer_id == 0)
+        win->status_timer_id = g_timeout_add(250, on_status_timer, win);
+}
+
+static void status_timer_stop(AppWindow *win) {
+    if (win->status_timer_id != 0) {
+        g_source_remove(win->status_timer_id);
+        win->status_timer_id = 0;
+    }
+}
+
 static void waterfall_timer_start(AppWindow *win) {
     if (win->waterfall_timer_id == 0)
         win->waterfall_timer_id = g_timeout_add(50, on_waterfall_timer, win);
@@ -243,12 +275,14 @@ static void on_start_clicked(GtkWidget * /*widget*/, gpointer data) {
     auto *win = static_cast<AppWindow *>(data);
 
     if (win->decoder.is_running()) {
+        status_timer_stop(win);
         waterfall_timer_stop(win);
         win->decoder.stop();
         win->decoder.close();
         gtk_button_set_label(GTK_BUTTON(win->start_button), "Start");
         gtk_widget_set_sensitive(win->audio_combo, TRUE);
         gtk_widget_set_sensitive(win->refresh_button, TRUE);
+        gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->statusbar_context);
         gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
                            "Decoder stopped");
         return;
@@ -286,15 +320,15 @@ static void on_start_clicked(GtkWidget * /*widget*/, gpointer data) {
 
     win->decoder.start();
     waterfall_timer_start(win);
+    status_timer_start(win);
     gtk_button_set_label(GTK_BUTTON(win->start_button), "Stop");
     gtk_widget_set_sensitive(win->audio_combo, FALSE);
     gtk_widget_set_sensitive(win->refresh_button, FALSE);
-    gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
-                       "Decoder running...");
 }
 
 static void on_window_destroy(GtkWidget * /*widget*/, gpointer data) {
     auto *win = static_cast<AppWindow *>(data);
+    status_timer_stop(win);
     waterfall_timer_stop(win);
     win->decoder.stop();
     win->decoder.close();

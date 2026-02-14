@@ -21,6 +21,9 @@ struct AppWindow {
     int        waterfall_width     = 0;
     int        waterfall_height    = 0;
     guint      waterfall_timer_id  = 0;
+
+    // Status bar update timer
+    guint      status_timer_id    = 0;
 };
 
 AppWindow *app_window_new(GtkApplication *app);

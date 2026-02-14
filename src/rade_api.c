@@ -105,6 +105,7 @@ struct rade *rade_open(char model_file[], int flags) {
         free(r);
         return NULL;
     }
+    fprintf(stderr, "rade_open: receiver initialized!\n");
 
     /* Set verbosity based on flags */
     if (flags & RADE_VERBOSE_0) {

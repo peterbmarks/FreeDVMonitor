@@ -178,3 +178,7 @@ format `name=version`. Find current versions at https://packages.msys2.org/.
 
 After updating versions, delete `deps/mingw64/` (or just remove
 `deps/mingw64/.setup-done`) and re-run the script.
+
+## Source code
+
+Published [here](https://github.com/peterbmarks/FreeDVMonitor)

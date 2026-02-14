@@ -52,8 +52,60 @@ static void on_refresh_clicked(GtkWidget * /*widget*/, gpointer data) {
                        "Audio devices refreshed");
 }
 
+static void on_start_clicked(GtkWidget * /*widget*/, gpointer data) {
+    auto *win = static_cast<AppWindow *>(data);
+
+    if (win->decoder.is_running()) {
+        win->decoder.stop();
+        win->decoder.close();
+        gtk_button_set_label(GTK_BUTTON(win->start_button), "Start");
+        gtk_widget_set_sensitive(win->audio_combo, TRUE);
+        gtk_widget_set_sensitive(win->refresh_button, TRUE);
+        gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
+                           "Decoder stopped");
+        return;
+    }
+
+    gchar *text = gtk_combo_box_text_get_active_text(
+        GTK_COMBO_BOX_TEXT(win->audio_combo));
+    if (!text) {
+        gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
+                           "No audio input selected");
+        return;
+    }
+
+    std::string dev_name(text);
+    g_free(text);
+
+    /* Look up PortAudio device index by name */
+    Pa_Initialize();
+    int dev_index = RadaeDecoder::find_device_by_name(dev_name);
+    Pa_Terminate();
+
+    if (dev_index == paNoDevice) {
+        gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
+                           "Audio device not found");
+        return;
+    }
+
+    if (!win->decoder.open(dev_index)) {
+        gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
+                           "Failed to open audio streams");
+        return;
+    }
+
+    win->decoder.start();
+    gtk_button_set_label(GTK_BUTTON(win->start_button), "Stop");
+    gtk_widget_set_sensitive(win->audio_combo, FALSE);
+    gtk_widget_set_sensitive(win->refresh_button, FALSE);
+    gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
+                       "Decoder running...");
+}
+
 static void on_window_destroy(GtkWidget * /*widget*/, gpointer data) {
     auto *win = static_cast<AppWindow *>(data);
+    win->decoder.stop();
+    win->decoder.close();
     delete win;
 }
 
@@ -83,7 +135,7 @@ AppWindow *app_window_new(GtkApplication *app) {
     // Separator
     gtk_box_pack_start(GTK_BOX(vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
 
-    // Audio input row: label + combo + refresh button
+    // Audio input row: label + combo + refresh button + start button
     GtkWidget *audio_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     gtk_box_pack_start(GTK_BOX(vbox), audio_box, FALSE, FALSE, 0);
 
@@ -97,6 +149,10 @@ AppWindow *app_window_new(GtkApplication *app) {
     win->refresh_button = gtk_button_new_with_label("Refresh");
     gtk_box_pack_start(GTK_BOX(audio_box), win->refresh_button, FALSE, FALSE, 0);
     g_signal_connect(win->refresh_button, "clicked", G_CALLBACK(on_refresh_clicked), win);
+
+    win->start_button = gtk_button_new_with_label("Start");
+    gtk_box_pack_start(GTK_BOX(audio_box), win->start_button, FALSE, FALSE, 0);
+    g_signal_connect(win->start_button, "clicked", G_CALLBACK(on_start_clicked), win);
 
     populate_audio_inputs(win);
 

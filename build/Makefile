@@ -117,6 +117,19 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named build_opus
+
+# Build rule for target.
+build_opus: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 build_opus
+.PHONY : build_opus
+
+# fast build rule for target.
+build_opus/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/build_opus.dir/build.make CMakeFiles/build_opus.dir/build
+.PHONY : build_opus/fast
+
+#=============================================================================
 # Target rules for targets named FreeDVMonitor
 
 # Build rule for target.
@@ -177,6 +190,294 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+src/rade_acq.o: src/rade_acq.c.o
+.PHONY : src/rade_acq.o
+
+# target to build an object file
+src/rade_acq.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_acq.c.o
+.PHONY : src/rade_acq.c.o
+
+src/rade_acq.i: src/rade_acq.c.i
+.PHONY : src/rade_acq.i
+
+# target to preprocess a source file
+src/rade_acq.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_acq.c.i
+.PHONY : src/rade_acq.c.i
+
+src/rade_acq.s: src/rade_acq.c.s
+.PHONY : src/rade_acq.s
+
+# target to generate assembly for a file
+src/rade_acq.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_acq.c.s
+.PHONY : src/rade_acq.c.s
+
+src/rade_api.o: src/rade_api.c.o
+.PHONY : src/rade_api.o
+
+# target to build an object file
+src/rade_api.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_api.c.o
+.PHONY : src/rade_api.c.o
+
+src/rade_api.i: src/rade_api.c.i
+.PHONY : src/rade_api.i
+
+# target to preprocess a source file
+src/rade_api.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_api.c.i
+.PHONY : src/rade_api.c.i
+
+src/rade_api.s: src/rade_api.c.s
+.PHONY : src/rade_api.s
+
+# target to generate assembly for a file
+src/rade_api.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_api.c.s
+.PHONY : src/rade_api.c.s
+
+src/rade_bpf.o: src/rade_bpf.c.o
+.PHONY : src/rade_bpf.o
+
+# target to build an object file
+src/rade_bpf.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_bpf.c.o
+.PHONY : src/rade_bpf.c.o
+
+src/rade_bpf.i: src/rade_bpf.c.i
+.PHONY : src/rade_bpf.i
+
+# target to preprocess a source file
+src/rade_bpf.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_bpf.c.i
+.PHONY : src/rade_bpf.c.i
+
+src/rade_bpf.s: src/rade_bpf.c.s
+.PHONY : src/rade_bpf.s
+
+# target to generate assembly for a file
+src/rade_bpf.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_bpf.c.s
+.PHONY : src/rade_bpf.c.s
+
+src/rade_dec.o: src/rade_dec.c.o
+.PHONY : src/rade_dec.o
+
+# target to build an object file
+src/rade_dec.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dec.c.o
+.PHONY : src/rade_dec.c.o
+
+src/rade_dec.i: src/rade_dec.c.i
+.PHONY : src/rade_dec.i
+
+# target to preprocess a source file
+src/rade_dec.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dec.c.i
+.PHONY : src/rade_dec.c.i
+
+src/rade_dec.s: src/rade_dec.c.s
+.PHONY : src/rade_dec.s
+
+# target to generate assembly for a file
+src/rade_dec.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dec.c.s
+.PHONY : src/rade_dec.c.s
+
+src/rade_dec_data.o: src/rade_dec_data.c.o
+.PHONY : src/rade_dec_data.o
+
+# target to build an object file
+src/rade_dec_data.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dec_data.c.o
+.PHONY : src/rade_dec_data.c.o
+
+src/rade_dec_data.i: src/rade_dec_data.c.i
+.PHONY : src/rade_dec_data.i
+
+# target to preprocess a source file
+src/rade_dec_data.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dec_data.c.i
+.PHONY : src/rade_dec_data.c.i
+
+src/rade_dec_data.s: src/rade_dec_data.c.s
+.PHONY : src/rade_dec_data.s
+
+# target to generate assembly for a file
+src/rade_dec_data.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dec_data.c.s
+.PHONY : src/rade_dec_data.c.s
+
+src/rade_decoder.o: src/rade_decoder.cpp.o
+.PHONY : src/rade_decoder.o
+
+# target to build an object file
+src/rade_decoder.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_decoder.cpp.o
+.PHONY : src/rade_decoder.cpp.o
+
+src/rade_decoder.i: src/rade_decoder.cpp.i
+.PHONY : src/rade_decoder.i
+
+# target to preprocess a source file
+src/rade_decoder.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_decoder.cpp.i
+.PHONY : src/rade_decoder.cpp.i
+
+src/rade_decoder.s: src/rade_decoder.cpp.s
+.PHONY : src/rade_decoder.s
+
+# target to generate assembly for a file
+src/rade_decoder.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_decoder.cpp.s
+.PHONY : src/rade_decoder.cpp.s
+
+src/rade_dsp.o: src/rade_dsp.c.o
+.PHONY : src/rade_dsp.o
+
+# target to build an object file
+src/rade_dsp.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dsp.c.o
+.PHONY : src/rade_dsp.c.o
+
+src/rade_dsp.i: src/rade_dsp.c.i
+.PHONY : src/rade_dsp.i
+
+# target to preprocess a source file
+src/rade_dsp.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dsp.c.i
+.PHONY : src/rade_dsp.c.i
+
+src/rade_dsp.s: src/rade_dsp.c.s
+.PHONY : src/rade_dsp.s
+
+# target to generate assembly for a file
+src/rade_dsp.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dsp.c.s
+.PHONY : src/rade_dsp.c.s
+
+src/rade_enc.o: src/rade_enc.c.o
+.PHONY : src/rade_enc.o
+
+# target to build an object file
+src/rade_enc.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.o
+.PHONY : src/rade_enc.c.o
+
+src/rade_enc.i: src/rade_enc.c.i
+.PHONY : src/rade_enc.i
+
+# target to preprocess a source file
+src/rade_enc.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.i
+.PHONY : src/rade_enc.c.i
+
+src/rade_enc.s: src/rade_enc.c.s
+.PHONY : src/rade_enc.s
+
+# target to generate assembly for a file
+src/rade_enc.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.s
+.PHONY : src/rade_enc.c.s
+
+src/rade_enc_data.o: src/rade_enc_data.c.o
+.PHONY : src/rade_enc_data.o
+
+# target to build an object file
+src/rade_enc_data.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.o
+.PHONY : src/rade_enc_data.c.o
+
+src/rade_enc_data.i: src/rade_enc_data.c.i
+.PHONY : src/rade_enc_data.i
+
+# target to preprocess a source file
+src/rade_enc_data.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.i
+.PHONY : src/rade_enc_data.c.i
+
+src/rade_enc_data.s: src/rade_enc_data.c.s
+.PHONY : src/rade_enc_data.s
+
+# target to generate assembly for a file
+src/rade_enc_data.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.s
+.PHONY : src/rade_enc_data.c.s
+
+src/rade_ofdm.o: src/rade_ofdm.c.o
+.PHONY : src/rade_ofdm.o
+
+# target to build an object file
+src/rade_ofdm.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.o
+.PHONY : src/rade_ofdm.c.o
+
+src/rade_ofdm.i: src/rade_ofdm.c.i
+.PHONY : src/rade_ofdm.i
+
+# target to preprocess a source file
+src/rade_ofdm.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.i
+.PHONY : src/rade_ofdm.c.i
+
+src/rade_ofdm.s: src/rade_ofdm.c.s
+.PHONY : src/rade_ofdm.s
+
+# target to generate assembly for a file
+src/rade_ofdm.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.s
+.PHONY : src/rade_ofdm.c.s
+
+src/rade_rx.o: src/rade_rx.c.o
+.PHONY : src/rade_rx.o
+
+# target to build an object file
+src/rade_rx.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_rx.c.o
+.PHONY : src/rade_rx.c.o
+
+src/rade_rx.i: src/rade_rx.c.i
+.PHONY : src/rade_rx.i
+
+# target to preprocess a source file
+src/rade_rx.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_rx.c.i
+.PHONY : src/rade_rx.c.i
+
+src/rade_rx.s: src/rade_rx.c.s
+.PHONY : src/rade_rx.s
+
+# target to generate assembly for a file
+src/rade_rx.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_rx.c.s
+.PHONY : src/rade_rx.c.s
+
+src/rade_tx.o: src/rade_tx.c.o
+.PHONY : src/rade_tx.o
+
+# target to build an object file
+src/rade_tx.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.o
+.PHONY : src/rade_tx.c.o
+
+src/rade_tx.i: src/rade_tx.c.i
+.PHONY : src/rade_tx.i
+
+# target to preprocess a source file
+src/rade_tx.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.i
+.PHONY : src/rade_tx.c.i
+
+src/rade_tx.s: src/rade_tx.c.s
+.PHONY : src/rade_tx.s
+
+# target to generate assembly for a file
+src/rade_tx.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.s
+.PHONY : src/rade_tx.c.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -185,6 +486,7 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
+	@echo "... build_opus"
 	@echo "... FreeDVMonitor"
 	@echo "... src/app_window.o"
 	@echo "... src/app_window.i"
@@ -192,6 +494,42 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/rade_acq.o"
+	@echo "... src/rade_acq.i"
+	@echo "... src/rade_acq.s"
+	@echo "... src/rade_api.o"
+	@echo "... src/rade_api.i"
+	@echo "... src/rade_api.s"
+	@echo "... src/rade_bpf.o"
+	@echo "... src/rade_bpf.i"
+	@echo "... src/rade_bpf.s"
+	@echo "... src/rade_dec.o"
+	@echo "... src/rade_dec.i"
+	@echo "... src/rade_dec.s"
+	@echo "... src/rade_dec_data.o"
+	@echo "... src/rade_dec_data.i"
+	@echo "... src/rade_dec_data.s"
+	@echo "... src/rade_decoder.o"
+	@echo "... src/rade_decoder.i"
+	@echo "... src/rade_decoder.s"
+	@echo "... src/rade_dsp.o"
+	@echo "... src/rade_dsp.i"
+	@echo "... src/rade_dsp.s"
+	@echo "... src/rade_enc.o"
+	@echo "... src/rade_enc.i"
+	@echo "... src/rade_enc.s"
+	@echo "... src/rade_enc_data.o"
+	@echo "... src/rade_enc_data.i"
+	@echo "... src/rade_enc_data.s"
+	@echo "... src/rade_ofdm.o"
+	@echo "... src/rade_ofdm.i"
+	@echo "... src/rade_ofdm.s"
+	@echo "... src/rade_rx.o"
+	@echo "... src/rade_rx.i"
+	@echo "... src/rade_rx.s"
+	@echo "... src/rade_tx.o"
+	@echo "... src/rade_tx.i"
+	@echo "... src/rade_tx.s"
 .PHONY : help
 
 

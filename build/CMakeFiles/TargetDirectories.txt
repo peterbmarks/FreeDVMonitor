@@ -1,3 +1,4 @@
+/home/marksp/Documents/FreeDVMonitor/build/CMakeFiles/build_opus.dir
 /home/marksp/Documents/FreeDVMonitor/build/CMakeFiles/FreeDVMonitor.dir
 /home/marksp/Documents/FreeDVMonitor/build/CMakeFiles/edit_cache.dir
 /home/marksp/Documents/FreeDVMonitor/build/CMakeFiles/rebuild_cache.dir

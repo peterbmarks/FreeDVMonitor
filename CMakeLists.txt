@@ -1,16 +1,45 @@
 cmake_minimum_required(VERSION 3.16)
-project(FreeDVMonitor VERSION 0.1.0 LANGUAGES CXX)
+project(FreeDVMonitor VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# ── Opus (with FARGAN/LPCNet support) ────────────────────────────────────────
+include(cmake/BuildOpus.cmake)
 
 # Sources
 set(SOURCES
     src/main.cpp
     src/app_window.cpp
+    src/rade_decoder.cpp
+    src/rade_api.c
+    src/rade_rx.c
+    src/rade_acq.c
+    src/rade_bpf.c
+    src/rade_dec.c
+    src/rade_dec_data.c
+    src/rade_dsp.c
+    src/rade_enc.c
+    src/rade_enc_data.c
+    src/rade_ofdm.c
+    src/rade_tx.c
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
+
+# RADE C sources need Opus internal headers (config.h, os_support.h, etc.)
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+)
+
+# Link the static opus library (provides FARGAN, LPCNet)
+target_link_libraries(${PROJECT_NAME} PRIVATE opus)
+add_dependencies(${PROJECT_NAME} opus)
+
+# Math library on Unix
+if(UNIX)
+    target_link_libraries(${PROJECT_NAME} PRIVATE m)
+endif()
 
 if(CMAKE_CROSSCOMPILING AND WIN32)
     # Cross-compiling for Windows: use GTK3 from deps/mingw64

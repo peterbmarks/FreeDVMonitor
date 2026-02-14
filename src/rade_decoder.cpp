@@ -297,7 +297,7 @@ bool RadaeDecoder::open(int input_device_index)
     PaStreamParameters out_params{};
     out_params.device = out_dev;
     out_params.channelCount = 1;
-    out_params.suggestedLatency = out_info->defaultLowOutputLatency;
+    out_params.suggestedLatency = out_info->defaultHighOutputLatency;
 
     err = paFormatIsSupported + 1;
     for (auto fmt : fmts) {
@@ -305,13 +305,13 @@ bool RadaeDecoder::open(int input_device_index)
         rate_out_ = RADE_FS_SPEECH;
         if (Pa_IsFormatSupported(nullptr, &out_params, rate_out_) == paFormatIsSupported) {
             err = Pa_OpenStream(&pa_out_, nullptr, &out_params,
-                                rate_out_, 512, paClipOff, nullptr, nullptr);
+                                rate_out_, 2048, paClipOff, nullptr, nullptr);
             if (err == paNoError) { fmt_out_ = fmt; break; }
         }
         rate_out_ = static_cast<unsigned int>(out_info->defaultSampleRate);
         if (Pa_IsFormatSupported(nullptr, &out_params, rate_out_) == paFormatIsSupported) {
             err = Pa_OpenStream(&pa_out_, nullptr, &out_params,
-                                rate_out_, 512, paClipOff, nullptr, nullptr);
+                                rate_out_, 2048, paClipOff, nullptr, nullptr);
             if (err == paNoError) { fmt_out_ = fmt; break; }
         }
     }
@@ -402,7 +402,7 @@ bool RadaeDecoder::open_file(const std::string& wav_path)
     PaStreamParameters out_params{};
     out_params.device = out_dev;
     out_params.channelCount = 1;
-    out_params.suggestedLatency = out_info->defaultLowOutputLatency;
+    out_params.suggestedLatency = out_info->defaultHighOutputLatency;
 
     static const PaSampleFormat fmts[] = { paFloat32, paInt16 };
     PaError err = paFormatIsSupported + 1;
@@ -411,13 +411,13 @@ bool RadaeDecoder::open_file(const std::string& wav_path)
         rate_out_ = RADE_FS_SPEECH;
         if (Pa_IsFormatSupported(nullptr, &out_params, rate_out_) == paFormatIsSupported) {
             err = Pa_OpenStream(&pa_out_, nullptr, &out_params,
-                                rate_out_, 512, paClipOff, nullptr, nullptr);
+                                rate_out_, 2048, paClipOff, nullptr, nullptr);
             if (err == paNoError) { fmt_out_ = fmt; break; }
         }
         rate_out_ = static_cast<unsigned int>(out_info->defaultSampleRate);
         if (Pa_IsFormatSupported(nullptr, &out_params, rate_out_) == paFormatIsSupported) {
             err = Pa_OpenStream(&pa_out_, nullptr, &out_params,
-                                rate_out_, 512, paClipOff, nullptr, nullptr);
+                                rate_out_, 2048, paClipOff, nullptr, nullptr);
             if (err == paNoError) { fmt_out_ = fmt; break; }
         }
     }

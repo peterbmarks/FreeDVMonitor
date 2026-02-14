@@ -192,6 +192,49 @@ static gboolean on_waterfall_timer(gpointer data) {
     return G_SOURCE_CONTINUE;
 }
 
+/* ── Frequency scale below waterfall ───────────────────────────────── */
+
+static constexpr int    FREQ_SCALE_HEIGHT = 20;
+static constexpr float  MAX_FREQ_HZ      = 4000.0f;   // Nyquist at 8 kHz
+
+static gboolean on_freq_scale_draw(GtkWidget *widget, cairo_t *cr,
+                                   gpointer /*data*/) {
+    int w = gtk_widget_get_allocated_width(widget);
+    int h = gtk_widget_get_allocated_height(widget);
+
+    // Background
+    cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
+    cairo_paint(cr);
+
+    cairo_set_source_rgb(cr, 0.8, 0.8, 0.8);
+    cairo_select_font_face(cr, "sans", CAIRO_FONT_SLANT_NORMAL,
+                           CAIRO_FONT_WEIGHT_NORMAL);
+    cairo_set_font_size(cr, 10.0);
+
+    // Draw tick marks every 500 Hz
+    for (int freq = 0; freq <= (int)MAX_FREQ_HZ; freq += 500) {
+        double x = (double)freq / MAX_FREQ_HZ * w;
+
+        // Tick mark
+        cairo_move_to(cr, x, 0);
+        cairo_line_to(cr, x, 4);
+        cairo_stroke(cr);
+
+        // Label
+        char label[16];
+        snprintf(label, sizeof(label), "%d", freq);
+        cairo_text_extents_t ext;
+        cairo_text_extents(cr, label, &ext);
+        double lx = x - ext.width / 2.0;
+        if (lx < 0) lx = 0;
+        if (lx + ext.width > w) lx = w - ext.width;
+        cairo_move_to(cr, lx, h - 3);
+        cairo_show_text(cr, label);
+    }
+
+    return TRUE;
+}
+
 /* ── Status bar update timer ────────────────────────────────────────── */
 
 static gboolean on_status_timer(gpointer data) {
@@ -535,14 +578,25 @@ AppWindow *app_window_new(GtkApplication *app) {
                      G_CALLBACK(on_gain_slider_changed), win);
     gtk_box_pack_start(GTK_BOX(waterfall_box), win->gain_slider, FALSE, FALSE, 0);
 
+    // Waterfall + frequency scale stacked vertically
+    GtkWidget *wf_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_box_pack_start(GTK_BOX(waterfall_box), wf_vbox, TRUE, TRUE, 0);
+
     // Waterfall spectrum display
     win->waterfall_area = gtk_drawing_area_new();
     gtk_widget_set_size_request(win->waterfall_area, -1, 200);
-    gtk_box_pack_start(GTK_BOX(waterfall_box), win->waterfall_area, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(wf_vbox), win->waterfall_area, TRUE, TRUE, 0);
     g_signal_connect(win->waterfall_area, "draw",
                      G_CALLBACK(on_waterfall_draw), win);
     g_signal_connect(win->waterfall_area, "size-allocate",
                      G_CALLBACK(on_waterfall_size_allocate), win);
+
+    // Frequency scale
+    win->freq_scale_area = gtk_drawing_area_new();
+    gtk_widget_set_size_request(win->freq_scale_area, -1, FREQ_SCALE_HEIGHT);
+    gtk_box_pack_start(GTK_BOX(wf_vbox), win->freq_scale_area, FALSE, FALSE, 0);
+    g_signal_connect(win->freq_scale_area, "draw",
+                     G_CALLBACK(on_freq_scale_draw), win);
 
     // Status bar
     win->statusbar = gtk_statusbar_new();

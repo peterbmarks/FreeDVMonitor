@@ -20,6 +20,7 @@ struct AppWindow {
 
     // Waterfall spectrum display
     GtkWidget *waterfall_area      = nullptr;
+    GtkWidget *freq_scale_area     = nullptr;
     guchar    *waterfall_pixels    = nullptr;
     int        waterfall_width     = 0;
     int        waterfall_height    = 0;

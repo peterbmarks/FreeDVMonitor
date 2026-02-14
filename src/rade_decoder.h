@@ -36,6 +36,8 @@ public:
     float snr_dB()                const { return snr_dB_.load(std::memory_order_relaxed); }
     float freq_offset()           const { return freq_offset_.load(std::memory_order_relaxed); }
     float get_input_level()       const { return input_level_.load(std::memory_order_relaxed); }
+    void  set_input_gain(float g)       { input_gain_.store(g, std::memory_order_relaxed); }
+    float get_input_gain()        const { return input_gain_.load(std::memory_order_relaxed); }
     float get_output_level_left() const { return output_level_.load(std::memory_order_relaxed); }
     float get_output_level_right()const { return output_level_.load(std::memory_order_relaxed); } // mono
 
@@ -101,6 +103,7 @@ private:
     std::atomic<float> snr_dB_      {0.0f};
     std::atomic<float> freq_offset_ {0.0f};
     std::atomic<float> input_level_ {0.0f};
+    std::atomic<float> input_gain_  {1.0f};
     std::atomic<float> output_level_{0.0f};
 
     /* ── File playback mode ────────────────────────────────────────────── */

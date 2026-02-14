@@ -15,6 +15,9 @@ struct AppWindow {
 
     RadaeDecoder decoder;
 
+    // Input gain slider
+    GtkWidget *gain_slider         = nullptr;
+
     // Waterfall spectrum display
     GtkWidget *waterfall_area      = nullptr;
     guchar    *waterfall_pixels    = nullptr;

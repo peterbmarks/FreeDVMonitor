@@ -2,6 +2,7 @@
 #include <portaudio.h>
 #include <string>
 #include <cstring>
+#include <cmath>
 #ifdef __linux__
 #include <unistd.h>
 #include <fcntl.h>
@@ -59,6 +60,31 @@ static std::string config_load_audio_device() {
             result = val;
             g_free(val);
         }
+    }
+    g_key_file_free(kf);
+    return result;
+}
+
+static void config_save_input_gain(double gain_dB) {
+    GKeyFile *kf = g_key_file_new();
+    std::string path = config_path();
+    g_key_file_load_from_file(kf, path.c_str(), G_KEY_FILE_NONE, nullptr);
+    g_key_file_set_double(kf, "audio", "input_gain_dB", gain_dB);
+    g_key_file_save_to_file(kf, path.c_str(), nullptr);
+    g_key_file_free(kf);
+}
+
+static double config_load_input_gain() {
+    GKeyFile *kf = g_key_file_new();
+    std::string path = config_path();
+    double result = 0.0;  // 0 dB = unity gain
+    if (g_key_file_load_from_file(kf, path.c_str(), G_KEY_FILE_NONE, nullptr)) {
+        GError *err = nullptr;
+        double val = g_key_file_get_double(kf, "audio", "input_gain_dB", &err);
+        if (!err)
+            result = val;
+        else
+            g_error_free(err);
     }
     g_key_file_free(kf);
     return result;
@@ -208,6 +234,16 @@ static void waterfall_timer_stop(AppWindow *win) {
         g_source_remove(win->waterfall_timer_id);
         win->waterfall_timer_id = 0;
     }
+}
+
+/* ── Input gain slider ─────────────────────────────────────────────── */
+
+static void on_gain_slider_changed(GtkRange *range, gpointer data) {
+    auto *win = static_cast<AppWindow *>(data);
+    double dB = gtk_range_get_value(range);
+    float linear = static_cast<float>(std::pow(10.0, dB / 20.0));
+    win->decoder.set_input_gain(linear);
+    config_save_input_gain(dB);
 }
 
 /* ── Audio device helpers ──────────────────────────────────────────── */
@@ -385,10 +421,26 @@ AppWindow *app_window_new(GtkApplication *app) {
 
     populate_audio_inputs(win);
 
+    // Waterfall + gain slider row
+    GtkWidget *waterfall_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+    gtk_box_pack_start(GTK_BOX(vbox), waterfall_box, TRUE, TRUE, 0);
+
+    // Vertical gain slider (left edge) — range -40 to +20 dB, default from config
+    win->gain_slider = gtk_scale_new_with_range(GTK_ORIENTATION_VERTICAL, -40.0, 20.0, 1.0);
+    gtk_scale_set_value_pos(GTK_SCALE(win->gain_slider), GTK_POS_BOTTOM);
+    gtk_widget_set_size_request(win->gain_slider, -1, -1);
+    gtk_range_set_inverted(GTK_RANGE(win->gain_slider), TRUE);
+    double saved_gain = config_load_input_gain();
+    gtk_range_set_value(GTK_RANGE(win->gain_slider), saved_gain);
+    win->decoder.set_input_gain(static_cast<float>(std::pow(10.0, saved_gain / 20.0)));
+    g_signal_connect(win->gain_slider, "value-changed",
+                     G_CALLBACK(on_gain_slider_changed), win);
+    gtk_box_pack_start(GTK_BOX(waterfall_box), win->gain_slider, FALSE, FALSE, 0);
+
     // Waterfall spectrum display
     win->waterfall_area = gtk_drawing_area_new();
     gtk_widget_set_size_request(win->waterfall_area, -1, 200);
-    gtk_box_pack_start(GTK_BOX(vbox), win->waterfall_area, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(waterfall_box), win->waterfall_area, TRUE, TRUE, 0);
     g_signal_connect(win->waterfall_area, "draw",
                      G_CALLBACK(on_waterfall_draw), win);
     g_signal_connect(win->waterfall_area, "size-allocate",

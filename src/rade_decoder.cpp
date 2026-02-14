@@ -697,6 +697,15 @@ void RadaeDecoder::processing_loop()
 
         if (!running_.load(std::memory_order_relaxed)) break;
 
+        /* ── apply input gain ─────────────────────────────────────────── */
+        {
+            float gain = input_gain_.load(std::memory_order_relaxed);
+            if (gain != 1.0f) {
+                for (int i = 0; i < nin; i++)
+                    acc_8k[static_cast<size_t>(i)] *= gain;
+            }
+        }
+
         /* ── FFT spectrum of input 8 kHz audio ───────────────────────── */
         if (static_cast<int>(acc_8k.size()) >= FFT_SIZE) {
             std::complex<float> fft_buf[FFT_SIZE];

@@ -420,13 +420,15 @@ static void stop_decoder(AppWindow *win) {
 static void on_open_wav(GtkMenuItem * /*item*/, gpointer data) {
     auto *win = static_cast<AppWindow *>(data);
 
-    GtkWidget *dialog = gtk_file_chooser_dialog_new(
+    /* Use GtkFileChooserNative — it delegates to the native Windows file
+       picker (avoids GIO/GVfs dependencies that crash on cross-compiled
+       GTK3) and works identically on Linux. */
+    GtkFileChooserNative *dialog = gtk_file_chooser_native_new(
         "Open WAV File",
         GTK_WINDOW(win->window),
         GTK_FILE_CHOOSER_ACTION_OPEN,
-        "_Cancel", GTK_RESPONSE_CANCEL,
-        "_Open",   GTK_RESPONSE_ACCEPT,
-        nullptr);
+        "_Open",
+        "_Cancel");
 
     GtkFileFilter *filter = gtk_file_filter_new();
     gtk_file_filter_set_name(filter, "WAV files");
@@ -439,9 +441,9 @@ static void on_open_wav(GtkMenuItem * /*item*/, gpointer data) {
     gtk_file_filter_add_pattern(all_filter, "*");
     gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), all_filter);
 
-    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
+    if (gtk_native_dialog_run(GTK_NATIVE_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
         gchar *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
-        gtk_widget_destroy(dialog);
+        g_object_unref(dialog);
 
         stop_decoder(win);
 
@@ -468,7 +470,7 @@ static void on_open_wav(GtkMenuItem * /*item*/, gpointer data) {
         g_free(basename);
         g_free(filename);
     } else {
-        gtk_widget_destroy(dialog);
+        g_object_unref(dialog);
     }
 }
 

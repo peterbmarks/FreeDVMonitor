@@ -373,6 +373,80 @@ static void on_window_destroy(GtkWidget * /*widget*/, gpointer data) {
     delete win;
 }
 
+/* ── Menu callbacks ─────────────────────────────────────────────────── */
+
+static void stop_decoder(AppWindow *win) {
+    if (win->decoder.is_running()) {
+        status_timer_stop(win);
+        waterfall_timer_stop(win);
+        win->decoder.stop();
+        win->decoder.close();
+        gtk_button_set_label(GTK_BUTTON(win->start_button), "Start");
+        gtk_widget_set_sensitive(win->audio_combo, TRUE);
+        gtk_widget_set_sensitive(win->refresh_button, TRUE);
+    }
+}
+
+static void on_open_wav(GtkMenuItem * /*item*/, gpointer data) {
+    auto *win = static_cast<AppWindow *>(data);
+
+    GtkWidget *dialog = gtk_file_chooser_dialog_new(
+        "Open WAV File",
+        GTK_WINDOW(win->window),
+        GTK_FILE_CHOOSER_ACTION_OPEN,
+        "_Cancel", GTK_RESPONSE_CANCEL,
+        "_Open",   GTK_RESPONSE_ACCEPT,
+        nullptr);
+
+    GtkFileFilter *filter = gtk_file_filter_new();
+    gtk_file_filter_set_name(filter, "WAV files");
+    gtk_file_filter_add_pattern(filter, "*.wav");
+    gtk_file_filter_add_pattern(filter, "*.WAV");
+    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), filter);
+
+    GtkFileFilter *all_filter = gtk_file_filter_new();
+    gtk_file_filter_set_name(all_filter, "All files");
+    gtk_file_filter_add_pattern(all_filter, "*");
+    gtk_file_chooser_add_filter(GTK_FILE_CHOOSER(dialog), all_filter);
+
+    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
+        gchar *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+        gtk_widget_destroy(dialog);
+
+        stop_decoder(win);
+
+        if (!win->decoder.open_file(filename)) {
+            gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->statusbar_context);
+            gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
+                               "Failed to open WAV file");
+            g_free(filename);
+            return;
+        }
+
+        win->decoder.start();
+        waterfall_timer_start(win);
+        status_timer_start(win);
+        gtk_button_set_label(GTK_BUTTON(win->start_button), "Stop");
+        gtk_widget_set_sensitive(win->audio_combo, FALSE);
+        gtk_widget_set_sensitive(win->refresh_button, FALSE);
+
+        gchar *basename = g_path_get_basename(filename);
+        char msg[256];
+        snprintf(msg, sizeof(msg), "Playing: %s", basename);
+        gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->statusbar_context);
+        gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context, msg);
+        g_free(basename);
+        g_free(filename);
+    } else {
+        gtk_widget_destroy(dialog);
+    }
+}
+
+static void on_menu_exit(GtkMenuItem * /*item*/, gpointer data) {
+    auto *win = static_cast<AppWindow *>(data);
+    gtk_widget_destroy(win->window);
+}
+
 AppWindow *app_window_new(GtkApplication *app) {
     auto *win = new AppWindow{};
 
@@ -386,6 +460,26 @@ AppWindow *app_window_new(GtkApplication *app) {
     GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
     gtk_container_set_border_width(GTK_CONTAINER(vbox), 12);
     gtk_container_add(GTK_CONTAINER(win->window), vbox);
+
+    // Menu bar
+    GtkWidget *menubar = gtk_menu_bar_new();
+
+    GtkWidget *file_menu = gtk_menu_new();
+    GtkWidget *file_item = gtk_menu_item_new_with_label("File");
+    gtk_menu_item_set_submenu(GTK_MENU_ITEM(file_item), file_menu);
+
+    GtkWidget *open_wav_item = gtk_menu_item_new_with_label("Open WAV...");
+    g_signal_connect(open_wav_item, "activate", G_CALLBACK(on_open_wav), win);
+    gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), open_wav_item);
+
+    gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), gtk_separator_menu_item_new());
+
+    GtkWidget *exit_item = gtk_menu_item_new_with_label("Exit");
+    g_signal_connect(exit_item, "activate", G_CALLBACK(on_menu_exit), win);
+    gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), exit_item);
+
+    gtk_menu_shell_append(GTK_MENU_SHELL(menubar), file_item);
+    gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, FALSE, 0);
 
     // Header label
     win->header_label = gtk_label_new("FreeDV Monitor");

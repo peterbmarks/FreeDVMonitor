@@ -15,7 +15,7 @@ if(APPLE AND BUILD_OSX_UNIVERSAL)
 # Opus ./configure doesn't behave properly when built as a universal binary;
 # build it twice and use lipo to create a universal libopus.a instead.
 ExternalProject_Add(build_opus_x86
-    DOWNLOAD_EXTRACT_TIMESTAMP NO
+    DOWNLOAD_EXTRACT_TIMESTAMP YES
     BUILD_IN_SOURCE 1
     PATCH_COMMAND sh -c "patch dnn/nnet.h < ${CMAKE_CURRENT_SOURCE_DIR}/src/opus-nnet.h.diff"
     CONFIGURE_COMMAND ${CONFIGURE_COMMAND} --host=x86_64-apple-darwin --target=x86_64-apple-darwin CFLAGS=-arch\ x86_64\ -O2\ -mmacosx-version-min=10.11
@@ -24,7 +24,7 @@ ExternalProject_Add(build_opus_x86
     URL ${OPUS_URL}
 )
 ExternalProject_Add(build_opus_arm
-    DOWNLOAD_EXTRACT_TIMESTAMP NO
+    DOWNLOAD_EXTRACT_TIMESTAMP YES
     BUILD_IN_SOURCE 1
     PATCH_COMMAND sh -c "patch dnn/nnet.h < ${CMAKE_CURRENT_SOURCE_DIR}/src/opus-nnet.h.diff"
     CONFIGURE_COMMAND ${CONFIGURE_COMMAND} --host=aarch64-apple-darwin --target=aarch64-apple-darwin CFLAGS=-arch\ arm64\ -O2\ -mmacosx-version-min=10.11

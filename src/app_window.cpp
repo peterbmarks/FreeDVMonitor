@@ -456,10 +456,9 @@ AppWindow *app_window_new(GtkApplication *app) {
     gtk_window_set_default_size(GTK_WINDOW(win->window), 480, 500);
     g_signal_connect(win->window, "destroy", G_CALLBACK(on_window_destroy), win);
 
-    // Vertical box layout
-    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
-    gtk_container_set_border_width(GTK_CONTAINER(vbox), 12);
-    gtk_container_add(GTK_CONTAINER(win->window), vbox);
+    // Outer vertical box (no padding — menubar sits flush against window edges)
+    GtkWidget *outer_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_container_add(GTK_CONTAINER(win->window), outer_vbox);
 
     // Menu bar
     GtkWidget *menubar = gtk_menu_bar_new();
@@ -479,7 +478,12 @@ AppWindow *app_window_new(GtkApplication *app) {
     gtk_menu_shell_append(GTK_MENU_SHELL(file_menu), exit_item);
 
     gtk_menu_shell_append(GTK_MENU_SHELL(menubar), file_item);
-    gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(outer_vbox), menubar, FALSE, FALSE, 0);
+
+    // Content area with padding below the menubar
+    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+    gtk_container_set_border_width(GTK_CONTAINER(vbox), 12);
+    gtk_box_pack_start(GTK_BOX(outer_vbox), vbox, TRUE, TRUE, 0);
 
     // Header label
     win->header_label = gtk_label_new("FreeDV Monitor");

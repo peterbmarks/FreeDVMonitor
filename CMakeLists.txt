@@ -19,10 +19,7 @@ set(SOURCES
     src/rade_dec.c
     src/rade_dec_data.c
     src/rade_dsp.c
-    src/rade_enc.c
-    src/rade_enc_data.c
     src/rade_ofdm.c
-    src/rade_tx.c
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -35,6 +32,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # Link the static opus library (provides FARGAN, LPCNet)
 target_link_libraries(${PROJECT_NAME} PRIVATE opus)
 add_dependencies(${PROJECT_NAME} opus)
+
+# We're building RADE API statically, not importing from a DLL
+target_compile_definitions(${PROJECT_NAME} PRIVATE IS_BUILDING_RADE_API=1)
 
 # Math library on Unix
 if(UNIX)

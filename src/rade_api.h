@@ -72,8 +72,6 @@ extern "C" {
 #define RADE_SPEECH_SAMPLE_RATE 16000         // speech sample rate
 
 // init rade_open() flags
-#define RADE_USE_C_ENCODER 0x1
-#define RADE_USE_C_DECODER 0x2
 #define RADE_FOFF_TEST     0x4                // test mode used only by developers
 #define RADE_VERBOSE_0     0x8                // reduce verbosity to "quiet"
 
@@ -84,7 +82,7 @@ RADE_EXPORT void rade_initialize(void);
 // Should be called when done with RADE.
 RADE_EXPORT void rade_finalize(void);
 
-// note single context only in this version, one context has one Tx, and one Rx
+// Receive-only build for FreeDV Monitor
 RADE_EXPORT struct rade *rade_open(char model_file[], int flags);
 RADE_EXPORT void rade_close(struct rade *r);
 
@@ -92,23 +90,9 @@ RADE_EXPORT void rade_close(struct rade *r);
 RADE_EXPORT int rade_version(void);
 
 // helpers to set up arrays
-RADE_EXPORT int rade_n_tx_out(struct rade *r);
-RADE_EXPORT int rade_n_tx_eoo_out(struct rade *r);
 RADE_EXPORT int rade_nin_max(struct rade *r);
 RADE_EXPORT int rade_n_features_in_out(struct rade *r);
 RADE_EXPORT int rade_n_eoo_bits(struct rade *r);
-
-// note vocoder is not encapsulated in API in this version
-// returns number of RADE_COMP samples written to tx_out[]
-RADE_EXPORT int rade_tx(struct rade *r, RADE_COMP tx_out[], float features_in[]);
-
-// Set the rade_n_eoo_bits() bits to be sent in the EOO frame, which are
-// in +/- 1 float form (note NOT 1 or 0)
-RADE_EXPORT void rade_tx_set_eoo_bits(struct rade *r, float eoo_bits[]);
-
-// call this for the final frame at the end of over
-// returns the number of RADE_COMP samples written to tx_eoo_out[] 
-RADE_EXPORT int rade_tx_eoo(struct rade *r, RADE_COMP tx_eoo_out[]);
 
 // call me before each call to rade_rx(), provide nin samples to rx_in[]
 RADE_EXPORT int rade_nin(struct rade *r);

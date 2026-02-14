@@ -4,6 +4,7 @@
 
   Library of API functions that implement the Radio Autoencoder API.
   Pure C implementation - no Python dependency.
+  Receive-only build for FreeDV Monitor.
 
 \*---------------------------------------------------------------------------*/
 
@@ -42,11 +43,10 @@
 #include <stdio.h>
 
 #include "rade_api.h"
-#include "rade_tx.h"
 #include "rade_rx.h"
 
 /*---------------------------------------------------------------------------*\
-                           RADE CONTEXT
+                          RADE CONTEXT
 \*---------------------------------------------------------------------------*/
 
 struct rade {
@@ -54,15 +54,12 @@ struct rade {
     int auxdata;
     int bottleneck;
 
-    /* Transmitter state */
-    rade_tx_state tx;
-
     /* Receiver state */
     rade_rx_state rx;
 };
 
 /*---------------------------------------------------------------------------*\
-                        INITIALIZATION
+                       INITIALIZATION
 \*---------------------------------------------------------------------------*/
 
 void rade_initialize(void) {
@@ -85,11 +82,9 @@ struct rade *rade_open(char model_file[], int flags) {
     r->auxdata = 1;
     r->bottleneck = 3;
 
-    /* Note: model_file is ignored in this implementation
-       Weights are compiled in via rade_enc_data.c and rade_dec_data.c */
-    fprintf(stderr, "rade_open: model_file=%s (ignored, using built-in weights)\n", model_file);
+    (void)model_file;  /* weights are compiled in via rade_dec_data.c */
 
-    /* Initialize receiver (TX not needed for monitor/receive-only use) */
+    /* Initialize receiver */
     if (rade_rx_init(&r->rx, NULL, r->bottleneck, r->auxdata, 1) != 0) {
         fprintf(stderr, "rade_open: failed to initialize receiver\n");
         free(r);
@@ -111,21 +106,11 @@ void rade_close(struct rade *r) {
 }
 
 /*---------------------------------------------------------------------------*\
-                         GETTERS
+                        GETTERS
 \*---------------------------------------------------------------------------*/
 
 int rade_version(void) {
     return VERSION;
-}
-
-int rade_n_tx_out(struct rade *r) {
-    assert(r != NULL);
-    return rade_tx_n_samples_out(&r->tx);
-}
-
-int rade_n_tx_eoo_out(struct rade *r) {
-    assert(r != NULL);
-    return rade_tx_n_eoo_out(&r->tx);
 }
 
 int rade_nin_max(struct rade *r) {
@@ -149,32 +134,7 @@ int rade_n_eoo_bits(struct rade *r) {
 }
 
 /*---------------------------------------------------------------------------*\
-                         TRANSMISSION
-\*---------------------------------------------------------------------------*/
-
-RADE_EXPORT void rade_tx_set_eoo_bits(struct rade *r, float eoo_bits[]) {
-    assert(r != NULL);
-    assert(eoo_bits != NULL);
-    rade_tx_state_set_eoo_bits(&r->tx, eoo_bits);
-}
-
-int rade_tx(struct rade *r, RADE_COMP tx_out[], float features_in[]) {
-    assert(r != NULL);
-    assert(features_in != NULL);
-    assert(tx_out != NULL);
-
-    return rade_tx_process(&r->tx, tx_out, features_in);
-}
-
-int rade_tx_eoo(struct rade *r, RADE_COMP tx_eoo_out[]) {
-    assert(r != NULL);
-    assert(tx_eoo_out != NULL);
-
-    return rade_tx_state_eoo(&r->tx, tx_eoo_out);
-}
-
-/*---------------------------------------------------------------------------*\
-                         RECEPTION
+                        RECEPTION
 \*---------------------------------------------------------------------------*/
 
 int rade_rx(struct rade *r, float features_out[], int *has_eoo_out, float eoo_out[], RADE_COMP rx_in[]) {

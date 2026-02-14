@@ -209,38 +209,10 @@ CMakeFiles/FreeDVMonitor.dir/src/rade_dsp.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/FreeDVMonitor.dir/src/rade_dsp.c.s"
 	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/marksp/Documents/FreeDVMonitor/src/rade_dsp.c -o CMakeFiles/FreeDVMonitor.dir/src/rade_dsp.c.s
 
-CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.o: CMakeFiles/FreeDVMonitor.dir/flags.make
-CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.o: /home/marksp/Documents/FreeDVMonitor/src/rade_enc.c
-CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.o: CMakeFiles/FreeDVMonitor.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/marksp/Documents/FreeDVMonitor/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building C object CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.o"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.o -MF CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.o.d -o CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.o -c /home/marksp/Documents/FreeDVMonitor/src/rade_enc.c
-
-CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.i"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/marksp/Documents/FreeDVMonitor/src/rade_enc.c > CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.i
-
-CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.s"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/marksp/Documents/FreeDVMonitor/src/rade_enc.c -o CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.s
-
-CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.o: CMakeFiles/FreeDVMonitor.dir/flags.make
-CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.o: /home/marksp/Documents/FreeDVMonitor/src/rade_enc_data.c
-CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.o: CMakeFiles/FreeDVMonitor.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/marksp/Documents/FreeDVMonitor/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building C object CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.o"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.o -MF CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.o.d -o CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.o -c /home/marksp/Documents/FreeDVMonitor/src/rade_enc_data.c
-
-CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.i"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/marksp/Documents/FreeDVMonitor/src/rade_enc_data.c > CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.i
-
-CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.s"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/marksp/Documents/FreeDVMonitor/src/rade_enc_data.c -o CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.s
-
 CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.o: CMakeFiles/FreeDVMonitor.dir/flags.make
 CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.o: /home/marksp/Documents/FreeDVMonitor/src/rade_ofdm.c
 CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.o: CMakeFiles/FreeDVMonitor.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/marksp/Documents/FreeDVMonitor/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building C object CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/marksp/Documents/FreeDVMonitor/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building C object CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.o"
 	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.o -MF CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.o.d -o CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.o -c /home/marksp/Documents/FreeDVMonitor/src/rade_ofdm.c
 
 CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.i: cmake_force
@@ -250,20 +222,6 @@ CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.i: cmake_force
 CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.s"
 	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/marksp/Documents/FreeDVMonitor/src/rade_ofdm.c -o CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.s
-
-CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.o: CMakeFiles/FreeDVMonitor.dir/flags.make
-CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.o: /home/marksp/Documents/FreeDVMonitor/src/rade_tx.c
-CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.o: CMakeFiles/FreeDVMonitor.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/marksp/Documents/FreeDVMonitor/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building C object CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.o"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.o -MF CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.o.d -o CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.o -c /home/marksp/Documents/FreeDVMonitor/src/rade_tx.c
-
-CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.i"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/marksp/Documents/FreeDVMonitor/src/rade_tx.c > CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.i
-
-CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.s"
-	/usr/bin/gcc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/marksp/Documents/FreeDVMonitor/src/rade_tx.c -o CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.s
 
 # Object files for target FreeDVMonitor
 FreeDVMonitor_OBJECTS = \
@@ -277,10 +235,7 @@ FreeDVMonitor_OBJECTS = \
 "CMakeFiles/FreeDVMonitor.dir/src/rade_dec.c.o" \
 "CMakeFiles/FreeDVMonitor.dir/src/rade_dec_data.c.o" \
 "CMakeFiles/FreeDVMonitor.dir/src/rade_dsp.c.o" \
-"CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.o" \
-"CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.o" \
-"CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.o" \
-"CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.o"
+"CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.o"
 
 # External object files for target FreeDVMonitor
 FreeDVMonitor_EXTERNAL_OBJECTS =
@@ -295,14 +250,11 @@ FreeDVMonitor: CMakeFiles/FreeDVMonitor.dir/src/rade_bpf.c.o
 FreeDVMonitor: CMakeFiles/FreeDVMonitor.dir/src/rade_dec.c.o
 FreeDVMonitor: CMakeFiles/FreeDVMonitor.dir/src/rade_dec_data.c.o
 FreeDVMonitor: CMakeFiles/FreeDVMonitor.dir/src/rade_dsp.c.o
-FreeDVMonitor: CMakeFiles/FreeDVMonitor.dir/src/rade_enc.c.o
-FreeDVMonitor: CMakeFiles/FreeDVMonitor.dir/src/rade_enc_data.c.o
 FreeDVMonitor: CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.o
-FreeDVMonitor: CMakeFiles/FreeDVMonitor.dir/src/rade_tx.c.o
 FreeDVMonitor: CMakeFiles/FreeDVMonitor.dir/build.make
 FreeDVMonitor: build_opus-prefix/src/build_opus/.libs/libopus.a
 FreeDVMonitor: CMakeFiles/FreeDVMonitor.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/marksp/Documents/FreeDVMonitor/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Linking CXX executable FreeDVMonitor"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/marksp/Documents/FreeDVMonitor/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Linking CXX executable FreeDVMonitor"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/FreeDVMonitor.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

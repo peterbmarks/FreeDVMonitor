@@ -378,20 +378,7 @@ static void on_start_clicked(GtkWidget * /*widget*/, gpointer data) {
     std::string dev_name(text);
     g_free(text);
 
-    /* Look up PortAudio device index by name */
-    suppress_stderr(true);
-    Pa_Initialize();
-    suppress_stderr(false);
-    int dev_index = RadaeDecoder::find_device_by_name(dev_name);
-    Pa_Terminate();
-
-    if (dev_index == paNoDevice) {
-        gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
-                           "Audio device not found");
-        return;
-    }
-
-    if (!win->decoder.open(dev_index)) {
+    if (!win->decoder.open(dev_name)) {
         gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
                            "Failed to open audio streams");
         return;

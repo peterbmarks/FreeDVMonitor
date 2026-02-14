@@ -237,7 +237,7 @@ int RadaeDecoder::find_device_by_name(const std::string& name)
 
 /* ── open / close ────────────────────────────────────────────────────── */
 
-bool RadaeDecoder::open(int input_device_index)
+bool RadaeDecoder::open(const std::string& device_name)
 {
     close();
 
@@ -248,6 +248,13 @@ bool RadaeDecoder::open(int input_device_index)
     if (pa_err != paNoError)
         return false;
     pa_initialized_ = true;
+
+    /* ── Look up device by name (same PA session) ────────────────────── */
+    int input_device_index = find_device_by_name(device_name);
+    if (input_device_index == paNoDevice) {
+        Pa_Terminate(); pa_initialized_ = false;
+        return false;
+    }
 
     /* ── Determine capture sample rate ───────────────────────────────── */
     const PaDeviceInfo* in_info = Pa_GetDeviceInfo(input_device_index);

@@ -24,7 +24,7 @@ public:
     ~RadaeDecoder();
 
     /* lifecycle -------------------------------------------------------------- */
-    bool open(int input_device_index);
+    bool open(const std::string& device_name);
     bool open_file(const std::string& wav_path);
     void close();
     void start();

@@ -14,6 +14,13 @@ struct AppWindow {
     guint statusbar_context;
 
     RadaeDecoder decoder;
+
+    // Waterfall spectrum display
+    GtkWidget *waterfall_area      = nullptr;
+    guchar    *waterfall_pixels    = nullptr;
+    int        waterfall_width     = 0;
+    int        waterfall_height    = 0;
+    guint      waterfall_timer_id  = 0;
 };
 
 AppWindow *app_window_new(GtkApplication *app);

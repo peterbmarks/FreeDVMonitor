@@ -1,6 +1,7 @@
 #include "app_window.h"
 #include <portaudio.h>
 #include <string>
+#include <cstring>
 #ifdef __linux__
 #include <unistd.h>
 #include <fcntl.h>
@@ -29,6 +30,122 @@ static void suppress_stderr(bool suppress) {
     (void)suppress;
 #endif
 }
+
+/* ── Waterfall spectrum display ─────────────────────────────────────── */
+
+static void db_to_rgb(float dB, guchar *r, guchar *g, guchar *b) {
+    float t = (dB + 100.0f) / 60.0f;  // -100 dB → 0, -40 dB → 1
+    if (t < 0.0f) t = 0.0f;
+    if (t > 1.0f) t = 1.0f;
+
+    if (t < 0.2f) {
+        float s = t / 0.2f;
+        *r = 0; *g = 0; *b = (guchar)(s * 255);
+    } else if (t < 0.4f) {
+        float s = (t - 0.2f) / 0.2f;
+        *r = 0; *g = (guchar)(s * 255); *b = 255;
+    } else if (t < 0.6f) {
+        float s = (t - 0.4f) / 0.2f;
+        *r = (guchar)(s * 255); *g = 255; *b = (guchar)((1.0f - s) * 255);
+    } else if (t < 0.8f) {
+        float s = (t - 0.6f) / 0.2f;
+        *r = 255; *g = (guchar)((1.0f - s) * 255); *b = 0;
+    } else {
+        float s = (t - 0.8f) / 0.2f;
+        *r = 255; *g = (guchar)(s * 255); *b = (guchar)(s * 255);
+    }
+}
+
+static void on_waterfall_size_allocate(GtkWidget * /*widget*/,
+                                       GdkRectangle *allocation,
+                                       gpointer data) {
+    auto *win = static_cast<AppWindow *>(data);
+    int new_w = allocation->width;
+    int new_h = allocation->height;
+    if (new_w == win->waterfall_width && new_h == win->waterfall_height)
+        return;
+    g_free(win->waterfall_pixels);
+    win->waterfall_width  = new_w;
+    win->waterfall_height = new_h;
+    win->waterfall_pixels = (guchar *)g_malloc0(new_w * new_h * 3);
+}
+
+static gboolean on_waterfall_draw(GtkWidget * /*widget*/, cairo_t *cr,
+                                  gpointer data) {
+    auto *win = static_cast<AppWindow *>(data);
+    int w = win->waterfall_width;
+    int h = win->waterfall_height;
+    if (!win->waterfall_pixels || w <= 0 || h <= 0)
+        return FALSE;
+
+    cairo_surface_t *surf = cairo_image_surface_create(CAIRO_FORMAT_RGB24, w, h);
+    unsigned char *surf_data = cairo_image_surface_get_data(surf);
+    int surf_stride = cairo_image_surface_get_stride(surf);
+    cairo_surface_flush(surf);
+
+    for (int y = 0; y < h; y++) {
+        guchar *src = win->waterfall_pixels + y * w * 3;
+        guchar *dst = surf_data + y * surf_stride;
+        for (int x = 0; x < w; x++) {
+            guint32 *pixel = (guint32 *)(dst + x * 4);
+            *pixel = ((guint32)src[0] << 16) |
+                     ((guint32)src[1] << 8)  |
+                      (guint32)src[2];
+            src += 3;
+        }
+    }
+
+    cairo_surface_mark_dirty(surf);
+    cairo_set_source_surface(cr, surf, 0, 0);
+    cairo_paint(cr);
+    cairo_surface_destroy(surf);
+    return TRUE;
+}
+
+static gboolean on_waterfall_timer(gpointer data) {
+    auto *win = static_cast<AppWindow *>(data);
+    int w = win->waterfall_width;
+    int h = win->waterfall_height;
+    if (!win->waterfall_pixels || w <= 0 || h <= 0)
+        return G_SOURCE_CONTINUE;
+
+    int row_bytes = w * 3;
+
+    // Shift rows down by one
+    if (h > 1)
+        std::memmove(win->waterfall_pixels + row_bytes,
+                     win->waterfall_pixels,
+                     row_bytes * (h - 1));
+
+    // Get current spectrum
+    float spectrum[RadaeDecoder::SPECTRUM_BINS];
+    win->decoder.get_spectrum(spectrum, RadaeDecoder::SPECTRUM_BINS);
+
+    // Paint new row at top
+    guchar *row = win->waterfall_pixels;
+    for (int x = 0; x < w; x++) {
+        int bin = x * RadaeDecoder::SPECTRUM_BINS / w;
+        if (bin >= RadaeDecoder::SPECTRUM_BINS) bin = RadaeDecoder::SPECTRUM_BINS - 1;
+        db_to_rgb(spectrum[bin], &row[x * 3], &row[x * 3 + 1], &row[x * 3 + 2]);
+    }
+
+    gtk_widget_queue_draw(win->waterfall_area);
+    return G_SOURCE_CONTINUE;
+}
+
+static void waterfall_timer_start(AppWindow *win) {
+    if (win->waterfall_timer_id == 0)
+        win->waterfall_timer_id = g_timeout_add(50, on_waterfall_timer, win);
+}
+
+static void waterfall_timer_stop(AppWindow *win) {
+    if (win->waterfall_timer_id != 0) {
+        g_source_remove(win->waterfall_timer_id);
+        win->waterfall_timer_id = 0;
+    }
+}
+
+/* ── Audio device helpers ──────────────────────────────────────────── */
 
 static void populate_audio_inputs(AppWindow *win) {
     gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(win->audio_combo));
@@ -86,6 +203,7 @@ static void on_start_clicked(GtkWidget * /*widget*/, gpointer data) {
     auto *win = static_cast<AppWindow *>(data);
 
     if (win->decoder.is_running()) {
+        waterfall_timer_stop(win);
         win->decoder.stop();
         win->decoder.close();
         gtk_button_set_label(GTK_BUTTON(win->start_button), "Start");
@@ -127,6 +245,7 @@ static void on_start_clicked(GtkWidget * /*widget*/, gpointer data) {
     }
 
     win->decoder.start();
+    waterfall_timer_start(win);
     gtk_button_set_label(GTK_BUTTON(win->start_button), "Stop");
     gtk_widget_set_sensitive(win->audio_combo, FALSE);
     gtk_widget_set_sensitive(win->refresh_button, FALSE);
@@ -136,8 +255,11 @@ static void on_start_clicked(GtkWidget * /*widget*/, gpointer data) {
 
 static void on_window_destroy(GtkWidget * /*widget*/, gpointer data) {
     auto *win = static_cast<AppWindow *>(data);
+    waterfall_timer_stop(win);
     win->decoder.stop();
     win->decoder.close();
+    g_free(win->waterfall_pixels);
+    win->waterfall_pixels = nullptr;
     delete win;
 }
 
@@ -147,7 +269,7 @@ AppWindow *app_window_new(GtkApplication *app) {
     // Main window
     win->window = gtk_application_window_new(app);
     gtk_window_set_title(GTK_WINDOW(win->window), "FreeDV Monitor");
-    gtk_window_set_default_size(GTK_WINDOW(win->window), 480, 360);
+    gtk_window_set_default_size(GTK_WINDOW(win->window), 480, 500);
     g_signal_connect(win->window, "destroy", G_CALLBACK(on_window_destroy), win);
 
     // Vertical box layout
@@ -188,6 +310,15 @@ AppWindow *app_window_new(GtkApplication *app) {
     g_signal_connect(win->start_button, "clicked", G_CALLBACK(on_start_clicked), win);
 
     populate_audio_inputs(win);
+
+    // Waterfall spectrum display
+    win->waterfall_area = gtk_drawing_area_new();
+    gtk_widget_set_size_request(win->waterfall_area, -1, 200);
+    gtk_box_pack_start(GTK_BOX(vbox), win->waterfall_area, TRUE, TRUE, 0);
+    g_signal_connect(win->waterfall_area, "draw",
+                     G_CALLBACK(on_waterfall_draw), win);
+    g_signal_connect(win->waterfall_area, "size-allocate",
+                     G_CALLBACK(on_waterfall_size_allocate), win);
 
     // Status bar
     win->statusbar = gtk_statusbar_new();

@@ -31,6 +31,39 @@ static void suppress_stderr(bool suppress) {
 #endif
 }
 
+/* ── Configuration persistence ─────────────────────────────────────── */
+
+static std::string config_path() {
+    const gchar *dir = g_get_user_config_dir();  // ~/.config
+    std::string path = std::string(dir) + "/FreeDVMonitor";
+    g_mkdir_with_parents(path.c_str(), 0755);
+    return path + "/settings.ini";
+}
+
+static void config_save_audio_device(const char *device_name) {
+    GKeyFile *kf = g_key_file_new();
+    std::string path = config_path();
+    g_key_file_load_from_file(kf, path.c_str(), G_KEY_FILE_NONE, nullptr);
+    g_key_file_set_string(kf, "audio", "input_device", device_name);
+    g_key_file_save_to_file(kf, path.c_str(), nullptr);
+    g_key_file_free(kf);
+}
+
+static std::string config_load_audio_device() {
+    GKeyFile *kf = g_key_file_new();
+    std::string path = config_path();
+    std::string result;
+    if (g_key_file_load_from_file(kf, path.c_str(), G_KEY_FILE_NONE, nullptr)) {
+        gchar *val = g_key_file_get_string(kf, "audio", "input_device", nullptr);
+        if (val) {
+            result = val;
+            g_free(val);
+        }
+    }
+    g_key_file_free(kf);
+    return result;
+}
+
 /* ── Waterfall spectrum display ─────────────────────────────────────── */
 
 static void db_to_rgb(float dB, guchar *r, guchar *g, guchar *b) {
@@ -160,6 +193,9 @@ static void populate_audio_inputs(AppWindow *win) {
         return;
     }
 
+    std::string saved = config_load_audio_device();
+    int saved_index = -1;
+
     int count = Pa_GetDeviceCount();
     int added = 0;
     for (int i = 0; i < count; i++) {
@@ -167,6 +203,8 @@ static void populate_audio_inputs(AppWindow *win) {
         if (info && info->maxInputChannels > 0) {
             gtk_combo_box_text_append_text(
                 GTK_COMBO_BOX_TEXT(win->audio_combo), info->name);
+            if (!saved.empty() && saved == info->name)
+                saved_index = added;
             added++;
         }
     }
@@ -177,7 +215,8 @@ static void populate_audio_inputs(AppWindow *win) {
         gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->audio_combo),
                                        "(no input devices found)");
     }
-    gtk_combo_box_set_active(GTK_COMBO_BOX(win->audio_combo), 0);
+    gtk_combo_box_set_active(GTK_COMBO_BOX(win->audio_combo),
+                             saved_index >= 0 ? saved_index : 0);
 }
 
 static void on_audio_combo_changed(GtkComboBox *combo, gpointer data) {
@@ -188,6 +227,7 @@ static void on_audio_combo_changed(GtkComboBox *combo, gpointer data) {
         msg += text;
         gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
                            msg.c_str());
+        config_save_audio_device(text);
         g_free(text);
     }
 }

@@ -97,6 +97,7 @@ if(CMAKE_CROSSCOMPILING AND WIN32)
         epoxy harfbuzz fribidi fontconfig freetype
         intl z png16 pixman-1
         portaudio
+        comdlg32
     )
 
     # GTK3 DLLs needed at runtime

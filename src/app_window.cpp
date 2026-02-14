@@ -7,6 +7,10 @@
 #include <unistd.h>
 #include <fcntl.h>
 #endif
+#ifdef _WIN32
+#include <windows.h>
+#include <commdlg.h>
+#endif
 
 // Suppress noisy ALSA warnings on Linux (e.g. "Unable to find definition")
 static int saved_stderr_fd = -1;
@@ -417,12 +421,52 @@ static void stop_decoder(AppWindow *win) {
     }
 }
 
+/* Helper: run file dialog and start decoding the selected file */
+static void open_wav_file(AppWindow *win, const std::string& path) {
+    stop_decoder(win);
+
+    if (!win->decoder.open_file(path)) {
+        gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->statusbar_context);
+        gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
+                           "Failed to open WAV file");
+        return;
+    }
+
+    win->decoder.start();
+    waterfall_timer_start(win);
+    status_timer_start(win);
+    gtk_button_set_label(GTK_BUTTON(win->start_button), "Stop");
+    gtk_widget_set_sensitive(win->audio_combo, FALSE);
+    gtk_widget_set_sensitive(win->refresh_button, FALSE);
+
+    gchar *basename = g_path_get_basename(path.c_str());
+    char msg[256];
+    snprintf(msg, sizeof(msg), "Playing: %s", basename);
+    gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->statusbar_context);
+    gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context, msg);
+    g_free(basename);
+}
+
 static void on_open_wav(GtkMenuItem * /*item*/, gpointer data) {
     auto *win = static_cast<AppWindow *>(data);
 
-    /* Use GtkFileChooserNative — it delegates to the native Windows file
-       picker (avoids GIO/GVfs dependencies that crash on cross-compiled
-       GTK3) and works identically on Linux. */
+#ifdef _WIN32
+    /* Use the Win32 file dialog directly — cross-compiled GTK3's file
+       chooser crashes because GIO/GVfs modules are not available. */
+    char filename[MAX_PATH] = {};
+    OPENFILENAMEA ofn = {};
+    ofn.lStructSize  = sizeof(ofn);
+    ofn.hwndOwner    = nullptr;
+    ofn.lpstrFilter   = "WAV files (*.wav)\0*.wav\0All files (*.*)\0*.*\0";
+    ofn.lpstrFile     = filename;
+    ofn.nMaxFile      = sizeof(filename);
+    ofn.lpstrTitle    = "Open WAV File";
+    ofn.Flags         = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_NOCHANGEDIR;
+
+    if (GetOpenFileNameA(&ofn)) {
+        open_wav_file(win, filename);
+    }
+#else
     GtkFileChooserNative *dialog = gtk_file_chooser_native_new(
         "Open WAV File",
         GTK_WINDOW(win->window),
@@ -444,34 +488,12 @@ static void on_open_wav(GtkMenuItem * /*item*/, gpointer data) {
     if (gtk_native_dialog_run(GTK_NATIVE_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
         gchar *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
         g_object_unref(dialog);
-
-        stop_decoder(win);
-
-        if (!win->decoder.open_file(filename)) {
-            gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->statusbar_context);
-            gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
-                               "Failed to open WAV file");
-            g_free(filename);
-            return;
-        }
-
-        win->decoder.start();
-        waterfall_timer_start(win);
-        status_timer_start(win);
-        gtk_button_set_label(GTK_BUTTON(win->start_button), "Stop");
-        gtk_widget_set_sensitive(win->audio_combo, FALSE);
-        gtk_widget_set_sensitive(win->refresh_button, FALSE);
-
-        gchar *basename = g_path_get_basename(filename);
-        char msg[256];
-        snprintf(msg, sizeof(msg), "Playing: %s", basename);
-        gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->statusbar_context);
-        gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context, msg);
-        g_free(basename);
+        open_wav_file(win, filename);
         g_free(filename);
     } else {
         g_object_unref(dialog);
     }
+#endif
 }
 
 static void on_menu_exit(GtkMenuItem * /*item*/, gpointer data) {

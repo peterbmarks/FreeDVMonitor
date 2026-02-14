@@ -89,34 +89,17 @@ struct rade *rade_open(char model_file[], int flags) {
        Weights are compiled in via rade_enc_data.c and rade_dec_data.c */
     fprintf(stderr, "rade_open: model_file=%s (ignored, using built-in weights)\n", model_file);
 
-    /* Initialize transmitter
-       RADE_USE_C_ENCODER flag is now always implicitly set */
-    int bpf_en = 0;  /* BPF disabled by default */
-    if (rade_tx_init(&r->tx, NULL, r->bottleneck, r->auxdata, bpf_en) != 0) {
-        fprintf(stderr, "rade_open: failed to initialize transmitter\n");
-        free(r);
-        return NULL;
-    }
-
-    /* Initialize receiver
-       RADE_USE_C_DECODER flag is now always implicitly set */
+    /* Initialize receiver (TX not needed for monitor/receive-only use) */
     if (rade_rx_init(&r->rx, NULL, r->bottleneck, r->auxdata, 1) != 0) {
         fprintf(stderr, "rade_open: failed to initialize receiver\n");
         free(r);
         return NULL;
     }
-    fprintf(stderr, "rade_open: receiver initialized!\n");
 
     /* Set verbosity based on flags */
     if (flags & RADE_VERBOSE_0) {
         r->rx.verbose = 0;
     }
-
-    fprintf(stderr, "rade_open: n_features_in=%d Nmf=%d Neoo=%d n_eoo_bits=%d\n",
-            rade_tx_n_features_in(&r->tx),
-            rade_tx_n_samples_out(&r->tx),
-            rade_tx_n_eoo_out(&r->tx),
-            rade_tx_n_eoo_bits(&r->tx));
 
     return r;
 }
@@ -157,12 +140,12 @@ int rade_nin(struct rade *r) {
 
 int rade_n_features_in_out(struct rade *r) {
     assert(r != NULL);
-    return rade_tx_n_features_in(&r->tx);
+    return rade_rx_n_features_out(&r->rx);
 }
 
 int rade_n_eoo_bits(struct rade *r) {
     assert(r != NULL);
-    return rade_tx_n_eoo_bits(&r->tx);
+    return rade_rx_n_eoo_bits(&r->rx);
 }
 
 /*---------------------------------------------------------------------------*\

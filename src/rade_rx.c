@@ -52,7 +52,7 @@ int rade_rx_init(rade_rx_state *rx, const RADEDec *dec_model, int bottleneck, in
     rx->bpf_en = bpf_en;
     rx->coarse_mag = 1;
     rx->time_offset = -16;  /* Default fine timing offset */
-    rx->verbose = 2;
+    rx->verbose = 1;
 
     /* Initialize OFDM demodulator */
     rade_ofdm_init(&rx->ofdm, bottleneck);

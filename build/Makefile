@@ -142,6 +142,19 @@ FreeDVMonitor/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/build
 .PHONY : FreeDVMonitor/fast
 
+#=============================================================================
+# Target rules for targets named test_loopback
+
+# Build rule for target.
+test_loopback: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 test_loopback
+.PHONY : test_loopback
+
+# fast build rule for target.
+test_loopback/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/build
+.PHONY : test_loopback/fast
+
 src/app_window.o: src/app_window.cpp.o
 .PHONY : src/app_window.o
 
@@ -196,6 +209,7 @@ src/rade_acq.o: src/rade_acq.c.o
 # target to build an object file
 src/rade_acq.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_acq.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_acq.c.o
 .PHONY : src/rade_acq.c.o
 
 src/rade_acq.i: src/rade_acq.c.i
@@ -204,6 +218,7 @@ src/rade_acq.i: src/rade_acq.c.i
 # target to preprocess a source file
 src/rade_acq.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_acq.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_acq.c.i
 .PHONY : src/rade_acq.c.i
 
 src/rade_acq.s: src/rade_acq.c.s
@@ -212,6 +227,7 @@ src/rade_acq.s: src/rade_acq.c.s
 # target to generate assembly for a file
 src/rade_acq.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_acq.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_acq.c.s
 .PHONY : src/rade_acq.c.s
 
 src/rade_api.o: src/rade_api.c.o
@@ -220,6 +236,7 @@ src/rade_api.o: src/rade_api.c.o
 # target to build an object file
 src/rade_api.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_api.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_api.c.o
 .PHONY : src/rade_api.c.o
 
 src/rade_api.i: src/rade_api.c.i
@@ -228,6 +245,7 @@ src/rade_api.i: src/rade_api.c.i
 # target to preprocess a source file
 src/rade_api.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_api.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_api.c.i
 .PHONY : src/rade_api.c.i
 
 src/rade_api.s: src/rade_api.c.s
@@ -236,6 +254,7 @@ src/rade_api.s: src/rade_api.c.s
 # target to generate assembly for a file
 src/rade_api.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_api.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_api.c.s
 .PHONY : src/rade_api.c.s
 
 src/rade_bpf.o: src/rade_bpf.c.o
@@ -244,6 +263,7 @@ src/rade_bpf.o: src/rade_bpf.c.o
 # target to build an object file
 src/rade_bpf.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_bpf.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_bpf.c.o
 .PHONY : src/rade_bpf.c.o
 
 src/rade_bpf.i: src/rade_bpf.c.i
@@ -252,6 +272,7 @@ src/rade_bpf.i: src/rade_bpf.c.i
 # target to preprocess a source file
 src/rade_bpf.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_bpf.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_bpf.c.i
 .PHONY : src/rade_bpf.c.i
 
 src/rade_bpf.s: src/rade_bpf.c.s
@@ -260,6 +281,7 @@ src/rade_bpf.s: src/rade_bpf.c.s
 # target to generate assembly for a file
 src/rade_bpf.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_bpf.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_bpf.c.s
 .PHONY : src/rade_bpf.c.s
 
 src/rade_dec.o: src/rade_dec.c.o
@@ -268,6 +290,7 @@ src/rade_dec.o: src/rade_dec.c.o
 # target to build an object file
 src/rade_dec.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dec.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_dec.c.o
 .PHONY : src/rade_dec.c.o
 
 src/rade_dec.i: src/rade_dec.c.i
@@ -276,6 +299,7 @@ src/rade_dec.i: src/rade_dec.c.i
 # target to preprocess a source file
 src/rade_dec.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dec.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_dec.c.i
 .PHONY : src/rade_dec.c.i
 
 src/rade_dec.s: src/rade_dec.c.s
@@ -284,6 +308,7 @@ src/rade_dec.s: src/rade_dec.c.s
 # target to generate assembly for a file
 src/rade_dec.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dec.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_dec.c.s
 .PHONY : src/rade_dec.c.s
 
 src/rade_dec_data.o: src/rade_dec_data.c.o
@@ -292,6 +317,7 @@ src/rade_dec_data.o: src/rade_dec_data.c.o
 # target to build an object file
 src/rade_dec_data.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dec_data.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_dec_data.c.o
 .PHONY : src/rade_dec_data.c.o
 
 src/rade_dec_data.i: src/rade_dec_data.c.i
@@ -300,6 +326,7 @@ src/rade_dec_data.i: src/rade_dec_data.c.i
 # target to preprocess a source file
 src/rade_dec_data.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dec_data.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_dec_data.c.i
 .PHONY : src/rade_dec_data.c.i
 
 src/rade_dec_data.s: src/rade_dec_data.c.s
@@ -308,6 +335,7 @@ src/rade_dec_data.s: src/rade_dec_data.c.s
 # target to generate assembly for a file
 src/rade_dec_data.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dec_data.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_dec_data.c.s
 .PHONY : src/rade_dec_data.c.s
 
 src/rade_decoder.o: src/rade_decoder.cpp.o
@@ -340,6 +368,7 @@ src/rade_dsp.o: src/rade_dsp.c.o
 # target to build an object file
 src/rade_dsp.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dsp.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_dsp.c.o
 .PHONY : src/rade_dsp.c.o
 
 src/rade_dsp.i: src/rade_dsp.c.i
@@ -348,6 +377,7 @@ src/rade_dsp.i: src/rade_dsp.c.i
 # target to preprocess a source file
 src/rade_dsp.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dsp.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_dsp.c.i
 .PHONY : src/rade_dsp.c.i
 
 src/rade_dsp.s: src/rade_dsp.c.s
@@ -356,6 +386,7 @@ src/rade_dsp.s: src/rade_dsp.c.s
 # target to generate assembly for a file
 src/rade_dsp.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_dsp.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_dsp.c.s
 .PHONY : src/rade_dsp.c.s
 
 src/rade_ofdm.o: src/rade_ofdm.c.o
@@ -364,6 +395,7 @@ src/rade_ofdm.o: src/rade_ofdm.c.o
 # target to build an object file
 src/rade_ofdm.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_ofdm.c.o
 .PHONY : src/rade_ofdm.c.o
 
 src/rade_ofdm.i: src/rade_ofdm.c.i
@@ -372,6 +404,7 @@ src/rade_ofdm.i: src/rade_ofdm.c.i
 # target to preprocess a source file
 src/rade_ofdm.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_ofdm.c.i
 .PHONY : src/rade_ofdm.c.i
 
 src/rade_ofdm.s: src/rade_ofdm.c.s
@@ -380,6 +413,7 @@ src/rade_ofdm.s: src/rade_ofdm.c.s
 # target to generate assembly for a file
 src/rade_ofdm.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_ofdm.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_ofdm.c.s
 .PHONY : src/rade_ofdm.c.s
 
 src/rade_rx.o: src/rade_rx.c.o
@@ -388,6 +422,7 @@ src/rade_rx.o: src/rade_rx.c.o
 # target to build an object file
 src/rade_rx.c.o:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_rx.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_rx.c.o
 .PHONY : src/rade_rx.c.o
 
 src/rade_rx.i: src/rade_rx.c.i
@@ -396,6 +431,7 @@ src/rade_rx.i: src/rade_rx.c.i
 # target to preprocess a source file
 src/rade_rx.c.i:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_rx.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_rx.c.i
 .PHONY : src/rade_rx.c.i
 
 src/rade_rx.s: src/rade_rx.c.s
@@ -404,7 +440,32 @@ src/rade_rx.s: src/rade_rx.c.s
 # target to generate assembly for a file
 src/rade_rx.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/FreeDVMonitor.dir/build.make CMakeFiles/FreeDVMonitor.dir/src/rade_rx.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/src/rade_rx.c.s
 .PHONY : src/rade_rx.c.s
+
+tests/test_loopback.o: tests/test_loopback.c.o
+.PHONY : tests/test_loopback.o
+
+# target to build an object file
+tests/test_loopback.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/tests/test_loopback.c.o
+.PHONY : tests/test_loopback.c.o
+
+tests/test_loopback.i: tests/test_loopback.c.i
+.PHONY : tests/test_loopback.i
+
+# target to preprocess a source file
+tests/test_loopback.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/tests/test_loopback.c.i
+.PHONY : tests/test_loopback.c.i
+
+tests/test_loopback.s: tests/test_loopback.c.s
+.PHONY : tests/test_loopback.s
+
+# target to generate assembly for a file
+tests/test_loopback.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/test_loopback.dir/build.make CMakeFiles/test_loopback.dir/tests/test_loopback.c.s
+.PHONY : tests/test_loopback.c.s
 
 # Help Target
 help:
@@ -416,6 +477,7 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... build_opus"
 	@echo "... FreeDVMonitor"
+	@echo "... test_loopback"
 	@echo "... src/app_window.o"
 	@echo "... src/app_window.i"
 	@echo "... src/app_window.s"
@@ -449,6 +511,9 @@ help:
 	@echo "... src/rade_rx.o"
 	@echo "... src/rade_rx.i"
 	@echo "... src/rade_rx.s"
+	@echo "... tests/test_loopback.o"
+	@echo "... tests/test_loopback.i"
+	@echo "... tests/test_loopback.s"
 .PHONY : help
 
 

@@ -323,7 +323,7 @@ bool RadaeDecoder::open(int input_device_index)
 
     /* ── RADE receiver ──────────────────────────────────────────────── */
     rade_initialize();
-    rade_ = rade_open(nullptr, RADE_VERBOSE_0);
+    rade_ = rade_open(nullptr, 0);   /* verbose=1 for diagnostics */
     if (!rade_) {
         Pa_CloseStream(pa_in_);  pa_in_  = nullptr;
         Pa_CloseStream(pa_out_); pa_out_ = nullptr;
@@ -428,7 +428,7 @@ bool RadaeDecoder::open_file(const std::string& wav_path)
 
     /* ── RADE receiver ──────────────────────────────────────────── */
     rade_initialize();
-    rade_ = rade_open(nullptr, RADE_VERBOSE_0);
+    rade_ = rade_open(nullptr, 0);   /* verbose=1 for diagnostics */
     if (!rade_) {
         Pa_CloseStream(pa_out_); pa_out_ = nullptr;
         Pa_Terminate(); pa_initialized_ = false;

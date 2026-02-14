@@ -24,6 +24,26 @@ set(SOURCES
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
+# ── Loopback test (no GTK/PortAudio needed) ────────────────────────────────
+set(TEST_RADE_SOURCES
+    src/rade_api.c
+    src/rade_rx.c
+    src/rade_acq.c
+    src/rade_bpf.c
+    src/rade_dec.c
+    src/rade_dec_data.c
+    src/rade_dsp.c
+    src/rade_ofdm.c
+)
+add_executable(test_loopback tests/test_loopback.c ${TEST_RADE_SOURCES})
+target_include_directories(test_loopback PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(test_loopback PRIVATE opus)
+target_compile_definitions(test_loopback PRIVATE IS_BUILDING_RADE_API=1)
+add_dependencies(test_loopback opus)
+if(UNIX)
+    target_link_libraries(test_loopback PRIVATE m)
+endif()
+
 # RADE C sources need Opus internal headers (config.h, os_support.h, etc.)
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src

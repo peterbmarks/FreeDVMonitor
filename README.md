@@ -15,6 +15,7 @@ A GTK3 GUI application written in C++17 that cross-compiles to Windows from Linu
 
 - Audio input device selection with persistent settings
 - Start/Stop controls for the decoder
+- Record button to capture raw audio samples to `recording.raw` (32-bit float at the device's native sample rate)
 - Input gain slider (-20 to +20 dB)
 - Real-time waterfall spectrum display
 - Status bar showing sync status, SNR, and frequency offset

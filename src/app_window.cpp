@@ -363,6 +363,7 @@ static void on_start_clicked(GtkWidget * /*widget*/, gpointer data) {
         win->decoder.stop();
         win->decoder.close();
         gtk_button_set_label(GTK_BUTTON(win->start_button), "Start");
+        gtk_button_set_label(GTK_BUTTON(win->record_button), "Record");
         gtk_widget_set_sensitive(win->audio_combo, TRUE);
         gtk_widget_set_sensitive(win->refresh_button, TRUE);
         gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->statusbar_context);
@@ -396,6 +397,30 @@ static void on_start_clicked(GtkWidget * /*widget*/, gpointer data) {
     gtk_widget_set_sensitive(win->refresh_button, FALSE);
 }
 
+static void on_record_clicked(GtkWidget * /*widget*/, gpointer data) {
+    auto *win = static_cast<AppWindow *>(data);
+
+    if (win->decoder.is_recording()) {
+        win->decoder.stop_recording();
+        gtk_button_set_label(GTK_BUTTON(win->record_button), "Record");
+        gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->statusbar_context);
+        gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
+                           "Recording stopped");
+    } else {
+        if (!win->decoder.is_running()) {
+            gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->statusbar_context);
+            gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
+                               "Start the decoder before recording");
+            return;
+        }
+        win->decoder.start_recording("recording.raw");
+        gtk_button_set_label(GTK_BUTTON(win->record_button), "Stop Rec");
+        gtk_statusbar_pop(GTK_STATUSBAR(win->statusbar), win->statusbar_context);
+        gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
+                           "Recording to recording.raw");
+    }
+}
+
 static void on_window_destroy(GtkWidget * /*widget*/, gpointer data) {
     auto *win = static_cast<AppWindow *>(data);
     status_timer_stop(win);
@@ -416,6 +441,7 @@ static void stop_decoder(AppWindow *win) {
         win->decoder.stop();
         win->decoder.close();
         gtk_button_set_label(GTK_BUTTON(win->start_button), "Start");
+        gtk_button_set_label(GTK_BUTTON(win->record_button), "Record");
         gtk_widget_set_sensitive(win->audio_combo, TRUE);
         gtk_widget_set_sensitive(win->refresh_button, TRUE);
     }
@@ -570,6 +596,10 @@ AppWindow *app_window_new(GtkApplication *app) {
     win->start_button = gtk_button_new_with_label("Start");
     gtk_box_pack_start(GTK_BOX(audio_box), win->start_button, FALSE, FALSE, 0);
     g_signal_connect(win->start_button, "clicked", G_CALLBACK(on_start_clicked), win);
+
+    win->record_button = gtk_button_new_with_label("Record");
+    gtk_box_pack_start(GTK_BOX(audio_box), win->record_button, FALSE, FALSE, 0);
+    g_signal_connect(win->record_button, "clicked", G_CALLBACK(on_record_clicked), win);
 
     populate_audio_inputs(win);
 

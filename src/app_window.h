@@ -10,6 +10,7 @@ struct AppWindow {
     GtkWidget *audio_combo;
     GtkWidget *refresh_button;
     GtkWidget *start_button;
+    GtkWidget *record_button;
     GtkWidget *statusbar;
     guint statusbar_context;
 

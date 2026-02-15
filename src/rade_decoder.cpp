@@ -222,6 +222,24 @@ void RadaeDecoder::get_spectrum(float* out, int n) const
     std::memcpy(out, spectrum_mag_, static_cast<size_t>(count) * sizeof(float));
 }
 
+/* ── raw recording ───────────────────────────────────────────────────── */
+
+void RadaeDecoder::start_recording(const std::string& path)
+{
+    std::lock_guard<std::mutex> lock(rec_mutex_);
+    if (rec_file_) return;
+    rec_file_ = std::fopen(path.c_str(), "wb");
+    if (rec_file_)
+        recording_.store(true, std::memory_order_relaxed);
+}
+
+void RadaeDecoder::stop_recording()
+{
+    recording_.store(false, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lock(rec_mutex_);
+    if (rec_file_) { std::fclose(rec_file_); rec_file_ = nullptr; }
+}
+
 /* ── find_device_by_name: map PortAudio device name to index ─────────── */
 
 int RadaeDecoder::find_device_by_name(const std::string& name)
@@ -465,6 +483,7 @@ bool RadaeDecoder::open_file(const std::string& wav_path)
 void RadaeDecoder::close()
 {
     stop();
+    stop_recording();
 
     if (rade_) { rade_close(rade_); rade_ = nullptr; }
     if (fargan_) { delete static_cast<FARGANState*>(fargan_); fargan_ = nullptr; }
@@ -684,6 +703,14 @@ void RadaeDecoder::processing_loop()
                 if (fmt_in_ == paInt16) {
                     for (unsigned long i = 0; i < READ_FRAMES; i++)
                         capture_buf[i] = capture_i16[i] / 32768.0f;
+                }
+
+                /* write raw capture to recording file */
+                if (recording_.load(std::memory_order_relaxed)) {
+                    std::lock_guard<std::mutex> lock(rec_mutex_);
+                    if (rec_file_)
+                        std::fwrite(capture_buf.data(), sizeof(float),
+                                    READ_FRAMES, rec_file_);
                 }
 
                 /* resample to 8 kHz */

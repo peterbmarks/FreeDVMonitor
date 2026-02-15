@@ -49,6 +49,11 @@ public:
     int  spectrum_bins()          const { return SPECTRUM_BINS; }
     float spectrum_sample_rate()  const { return 8000.f; } // always at modem rate
 
+    /* recording raw capture to disk ----------------------------------------- */
+    void start_recording(const std::string& path);
+    void stop_recording();
+    bool is_recording() const { return recording_.load(std::memory_order_relaxed); }
+
     /* helper: find PortAudio device index by name */
     static int find_device_by_name(const std::string& name);
 
@@ -105,6 +110,11 @@ private:
     std::atomic<float> input_level_ {0.0f};
     std::atomic<float> input_gain_  {1.0f};
     std::atomic<float> output_level_{0.0f};
+
+    /* ── Raw recording ────────────────────────────────────────────────── */
+    std::atomic<bool>  recording_   {false};
+    FILE*              rec_file_    = nullptr;
+    std::mutex         rec_mutex_;
 
     /* ── File playback mode ────────────────────────────────────────────── */
     bool                file_mode_      = false;

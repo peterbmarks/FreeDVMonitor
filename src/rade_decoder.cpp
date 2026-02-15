@@ -263,7 +263,9 @@ bool RadaeDecoder::open(const std::string& device_name)
         return false;
     }
 
-    /* Try 8 kHz first (native modem rate), fall back to device default.
+    /* Open capture at the device's default sample rate so the application
+       controls resampling to 8 kHz.  This avoids PipeWire/PulseAudio
+       internal resampling which can prevent RADAE modem sync.
        Try paFloat32 first, fall back to paInt16 (universally supported). */
     PaStreamParameters in_params{};
     in_params.device = input_device_index;
@@ -274,12 +276,6 @@ bool RadaeDecoder::open(const std::string& device_name)
     static const PaSampleFormat fmts[] = { paFloat32, paInt16 };
     for (auto fmt : fmts) {
         in_params.sampleFormat = fmt;
-        rate_in_ = RADE_FS;
-        if (Pa_IsFormatSupported(&in_params, nullptr, rate_in_) == paFormatIsSupported) {
-            err = Pa_OpenStream(&pa_in_, &in_params, nullptr,
-                                rate_in_, 512, paClipOff, nullptr, nullptr);
-            if (err == paNoError) { fmt_in_ = fmt; break; }
-        }
         rate_in_ = static_cast<unsigned int>(in_info->defaultSampleRate);
         if (Pa_IsFormatSupported(&in_params, nullptr, rate_in_) == paFormatIsSupported) {
             err = Pa_OpenStream(&pa_in_, &in_params, nullptr,

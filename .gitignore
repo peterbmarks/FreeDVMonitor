@@ -4,3 +4,4 @@ build-win/
 deps/
 *.exe
 *.dll
+examples/

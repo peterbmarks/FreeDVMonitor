@@ -306,6 +306,10 @@ bool RadaeDecoder::open(const std::string& device_name)
         return false;
     }
 
+    fprintf(stderr, "PortAudio capture: %s, %u Hz, %s\n",
+            in_info->name, rate_in_,
+            (fmt_in_ == paFloat32) ? "float32" : "int16");
+
     /* ── Determine playback sample rate ──────────────────────────────── */
     int out_dev = Pa_GetDefaultOutputDevice();
     if (out_dev == paNoDevice) {

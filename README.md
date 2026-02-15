@@ -1,6 +1,7 @@
-# FreeDV Monitor
+# FreeDV Monitor NOT WORKING YET!
 
 An application for Windows (and Linux) that can decode FreeDV RADE1 from a chosen audio input.
+
 Receive only, designed for people who want to listen in before installing the full FreeDV-GUI app.
 
 This code contains a C port of the python implementation [here](https://github.com/drowe67/radae)

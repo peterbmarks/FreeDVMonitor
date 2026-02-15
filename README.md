@@ -9,6 +9,8 @@ by David Rowe, VK5DGR.
 
 A GTK3 GUI application written in C++17 that cross-compiles to Windows from Linux using mingw-w64.
 
+![Screenshot](images/FreeDV%20Monitor.PNG)
+
 ## Features
 
 - Audio input device selection with persistent settings

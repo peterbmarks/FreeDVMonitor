@@ -539,7 +539,7 @@ AppWindow *app_window_new(GtkApplication *app) {
     // Separator
     gtk_box_pack_start(GTK_BOX(vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
 
-    // Audio input row: label + combo + refresh button + start button
+    // Audio input row: label + combo
     GtkWidget *audio_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     gtk_box_pack_start(GTK_BOX(vbox), audio_box, FALSE, FALSE, 0);
 
@@ -551,16 +551,20 @@ AppWindow *app_window_new(GtkApplication *app) {
     gtk_box_pack_start(GTK_BOX(audio_box), win->audio_combo, TRUE, TRUE, 0);
     g_signal_connect(win->audio_combo, "changed", G_CALLBACK(on_audio_combo_changed), win);
 
+    // Button row: Refresh + Start + Record
+    GtkWidget *button_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gtk_box_pack_start(GTK_BOX(vbox), button_box, FALSE, FALSE, 0);
+
     win->refresh_button = gtk_button_new_with_label("Refresh");
-    gtk_box_pack_start(GTK_BOX(audio_box), win->refresh_button, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(button_box), win->refresh_button, FALSE, FALSE, 0);
     g_signal_connect(win->refresh_button, "clicked", G_CALLBACK(on_refresh_clicked), win);
 
     win->start_button = gtk_button_new_with_label("Start");
-    gtk_box_pack_start(GTK_BOX(audio_box), win->start_button, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(button_box), win->start_button, FALSE, FALSE, 0);
     g_signal_connect(win->start_button, "clicked", G_CALLBACK(on_start_clicked), win);
 
     win->record_button = gtk_button_new_with_label("Record");
-    gtk_box_pack_start(GTK_BOX(audio_box), win->record_button, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(button_box), win->record_button, FALSE, FALSE, 0);
     g_signal_connect(win->record_button, "clicked", G_CALLBACK(on_record_clicked), win);
 
     populate_audio_inputs(win);

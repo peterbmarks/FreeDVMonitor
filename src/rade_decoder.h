@@ -5,8 +5,7 @@
 #include <atomic>
 #include <mutex>
 #include <thread>
-#include <pulse/simple.h>
-#include <pulse/error.h>
+#include "audio_backend.h"
 
 /* Forward declaration — avoids exposing RADE/FARGAN C headers in this header */
 struct rade;
@@ -59,9 +58,9 @@ public:
 private:
     void processing_loop();
 
-    /* ── PulseAudio streams ─────────────────────────────────────────────── */
-    pa_simple*    pa_in_   = nullptr;
-    pa_simple*    pa_out_  = nullptr;
+    /* ── Audio streams (platform-specific backend) ───────────────────────── */
+    std::unique_ptr<AudioCapture>  audio_in_;
+    std::unique_ptr<AudioPlayback> audio_out_;
 
     /* ── RADE receiver (opaque) ───────────────────────────────────────────── */
     struct rade*  rade_     = nullptr;

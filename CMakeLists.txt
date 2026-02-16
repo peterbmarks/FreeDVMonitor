@@ -22,9 +22,16 @@ set(SOURCES
     src/rade_ofdm.c
 )
 
+# Platform-specific audio backend
+if(CMAKE_CROSSCOMPILING AND WIN32)
+    list(APPEND SOURCES src/audio_wasapi.cpp)
+else()
+    list(APPEND SOURCES src/audio_pulse.cpp)
+endif()
+
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-# ── Loopback test (no GTK/PortAudio needed) ────────────────────────────────
+# ── Loopback test (no GTK/audio needed) ────────────────────────────────
 set(TEST_RADE_SOURCES
     src/rade_api.c
     src/rade_rx.c
@@ -96,7 +103,7 @@ if(CMAKE_CROSSCOMPILING AND WIN32)
         cairo gdk_pixbuf-2.0 atk-1.0
         epoxy harfbuzz fribidi fontconfig freetype
         intl z png16 pixman-1
-        portaudio
+        ole32 ksuser
         comdlg32
     )
 
@@ -147,7 +154,6 @@ if(CMAKE_CROSSCOMPILING AND WIN32)
         libgcc_s_seh-1.dll
         libstdc++-6.dll
         libwinpthread-1.dll
-        libportaudio.dll
     )
 
     # Copy required DLLs next to the exe after every build

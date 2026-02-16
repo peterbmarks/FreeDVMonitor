@@ -18,8 +18,8 @@ struct AppWindow {
 
     RadaeDecoder decoder;
 
-    // PulseAudio source names (parallel to combo box entries)
-    std::vector<std::string> pulse_source_names;
+    // Audio device IDs (parallel to combo box entries)
+    std::vector<std::string> audio_source_ids;
 
     // Input gain slider
     GtkWidget *gain_slider         = nullptr;

@@ -226,36 +226,19 @@ bool RadaeDecoder::open(const std::string& device_name)
 {
     close();
 
-    /* ── Open PulseAudio capture at 8 kHz mono float32 ────────────── */
-    pa_sample_spec cap_spec{};
-    cap_spec.format   = PA_SAMPLE_FLOAT32LE;
-    cap_spec.rate     = RADE_FS;        /* 8000 Hz — PulseAudio resamples from hardware */
-    cap_spec.channels = 1;
-
-    int pa_err = 0;
-    const char* dev = device_name.empty() ? nullptr : device_name.c_str();
-    pa_in_ = pa_simple_new(nullptr, "FreeDV Monitor", PA_STREAM_RECORD,
-                           dev, "Capture", &cap_spec, nullptr, nullptr, &pa_err);
-    if (!pa_in_) {
-        fprintf(stderr, "PulseAudio capture open failed: %s\n", pa_strerror(pa_err));
+    /* ── Open audio capture at 8 kHz mono float32 ─────────────────── */
+    audio_in_ = audio_create_capture();
+    if (!audio_in_->open(device_name, RADE_FS, 1)) {
+        audio_in_.reset();
         return false;
     }
 
-    fprintf(stderr, "PulseAudio capture: %s, %u Hz, float32\n",
-            device_name.empty() ? "(default)" : device_name.c_str(),
-            cap_spec.rate);
-
-    /* ── Open PulseAudio playback at 16 kHz mono float32 ─────────── */
-    pa_sample_spec play_spec{};
-    play_spec.format   = PA_SAMPLE_FLOAT32LE;
-    play_spec.rate     = RADE_FS_SPEECH;  /* 16000 Hz — PulseAudio resamples to hardware */
-    play_spec.channels = 1;
-
-    pa_out_ = pa_simple_new(nullptr, "FreeDV Monitor", PA_STREAM_PLAYBACK,
-                            nullptr, "Playback", &play_spec, nullptr, nullptr, &pa_err);
-    if (!pa_out_) {
-        fprintf(stderr, "PulseAudio playback open failed: %s\n", pa_strerror(pa_err));
-        pa_simple_free(pa_in_); pa_in_ = nullptr;
+    /* ── Open audio playback at 16 kHz mono float32 ───────────────── */
+    audio_out_ = audio_create_playback();
+    if (!audio_out_->open(RADE_FS_SPEECH, 1)) {
+        audio_in_->close();
+        audio_in_.reset();
+        audio_out_.reset();
         return false;
     }
 
@@ -263,8 +246,8 @@ bool RadaeDecoder::open(const std::string& device_name)
     rade_initialize();
     rade_ = rade_open(nullptr, 0);
     if (!rade_) {
-        pa_simple_free(pa_in_);  pa_in_  = nullptr;
-        pa_simple_free(pa_out_); pa_out_ = nullptr;
+        audio_in_->close();  audio_in_.reset();
+        audio_out_->close(); audio_out_.reset();
         return false;
     }
 
@@ -316,17 +299,10 @@ bool RadaeDecoder::open_file(const std::string& wav_path)
     if (file_audio_8k_.empty()) return false;
     file_pos_ = 0;
 
-    /* ── Open PulseAudio playback at 16 kHz mono float32 ─────────── */
-    pa_sample_spec play_spec{};
-    play_spec.format   = PA_SAMPLE_FLOAT32LE;
-    play_spec.rate     = RADE_FS_SPEECH;
-    play_spec.channels = 1;
-
-    int pa_err = 0;
-    pa_out_ = pa_simple_new(nullptr, "FreeDV Monitor", PA_STREAM_PLAYBACK,
-                            nullptr, "Playback", &play_spec, nullptr, nullptr, &pa_err);
-    if (!pa_out_) {
-        fprintf(stderr, "PulseAudio playback open failed: %s\n", pa_strerror(pa_err));
+    /* ── Open audio playback at 16 kHz mono float32 ─────────────── */
+    audio_out_ = audio_create_playback();
+    if (!audio_out_->open(RADE_FS_SPEECH, 1)) {
+        audio_out_.reset();
         return false;
     }
 
@@ -334,7 +310,7 @@ bool RadaeDecoder::open_file(const std::string& wav_path)
     rade_initialize();
     rade_ = rade_open(nullptr, 0);
     if (!rade_) {
-        pa_simple_free(pa_out_); pa_out_ = nullptr;
+        audio_out_->close(); audio_out_.reset();
         return false;
     }
 
@@ -369,8 +345,8 @@ void RadaeDecoder::close()
     if (rade_) { rade_close(rade_); rade_ = nullptr; }
     if (fargan_) { delete static_cast<FARGANState*>(fargan_); fargan_ = nullptr; }
 
-    if (pa_in_)  { pa_simple_free(pa_in_);  pa_in_  = nullptr; }
-    if (pa_out_) { pa_simple_free(pa_out_); pa_out_ = nullptr; }
+    if (audio_in_)  { audio_in_->close();  audio_in_.reset(); }
+    if (audio_out_) { audio_out_->close(); audio_out_.reset(); }
 
     file_audio_8k_.clear();
     file_audio_8k_.shrink_to_fit();
@@ -388,7 +364,7 @@ void RadaeDecoder::close()
 
 void RadaeDecoder::start()
 {
-    if ((!pa_in_ && !file_mode_) || !pa_out_ || !rade_ || running_) return;
+    if ((!audio_in_ && !file_mode_) || !audio_out_ || !rade_ || running_) return;
 
     running_ = true;
     thread_  = std::thread(&RadaeDecoder::processing_loop, this);
@@ -402,7 +378,7 @@ void RadaeDecoder::stop()
     if (thread_.joinable()) thread_.join();
 
     /* Flush any remaining playback data */
-    if (pa_out_) pa_simple_flush(pa_out_, nullptr);
+    if (audio_out_) audio_out_->flush();
 
     input_level_  = 0.0f;
     output_level_ = 0.0f;
@@ -492,13 +468,11 @@ void RadaeDecoder::processing_loop()
                               file_audio_8k_.begin() + static_cast<ptrdiff_t>(file_pos_ + chunk));
                 file_pos_ += chunk;
             } else {
-                /* ── live mode: read from PulseAudio capture ────────── */
-                int pa_err = 0;
-                int ret = pa_simple_read(pa_in_, capture_buf.data(),
-                                         READ_FRAMES * sizeof(float), &pa_err);
+                /* ── live mode: read from audio capture ───────────── */
+                int ret = audio_in_->read(capture_buf.data(), READ_FRAMES);
                 if (ret < 0) {
                     if (!running_.load(std::memory_order_relaxed)) break;
-                    fprintf(stderr, "PulseAudio read error: %s\n", pa_strerror(pa_err));
+                    fprintf(stderr, "Audio capture read error\n");
                     running_ = false;
                     break;
                 }
@@ -634,9 +608,7 @@ void RadaeDecoder::processing_loop()
                         if (!output_primed) {
                             int prefill = 2 * 12 * LPCNET_FRAME_SIZE;
                             std::vector<float> silence(static_cast<size_t>(prefill), 0.0f);
-                            pa_simple_write(pa_out_, silence.data(),
-                                            static_cast<size_t>(prefill) * sizeof(float),
-                                            nullptr);
+                            audio_out_->write(silence.data(), prefill);
                             output_primed = true;
                         }
                     }
@@ -653,11 +625,9 @@ void RadaeDecoder::processing_loop()
                     rms_sum += static_cast<double>(fpcm[s]) * fpcm[s];
                 rms_n += LPCNET_FRAME_SIZE;
 
-                /* ── write 16 kHz speech to PulseAudio output ──────────── */
+                /* ── write 16 kHz speech to audio output ────────────────── */
                 if (running_.load(std::memory_order_relaxed)) {
-                    pa_simple_write(pa_out_, fpcm,
-                                    LPCNET_FRAME_SIZE * sizeof(float),
-                                    nullptr);
+                    audio_out_->write(fpcm, LPCNET_FRAME_SIZE);
                 }
             }
 

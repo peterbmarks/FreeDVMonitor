@@ -8,6 +8,16 @@
 #include <cstdio>
 #include <cstring>
 #include <cmath>
+#include <vector>
+
+/* ── WASAPI stream flags for automatic format conversion (Win 7+) ──── */
+
+#ifndef AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM
+#define AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM      0x80000000
+#endif
+#ifndef AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY
+#define AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY  0x08000000
+#endif
 
 /* ── COM helper ────────────────────────────────────────────────────── */
 
@@ -55,7 +65,7 @@ public:
                                       CLSCTX_ALL, __uuidof(IMMDeviceEnumerator),
                                       reinterpret_cast<void**>(&enumerator));
         if (FAILED(hr)) {
-            fprintf(stderr, "WASAPI: Failed to create device enumerator (0x%08lx)\n", hr);
+            fprintf(stderr, "WASAPI capture: CoCreateInstance failed (0x%08lx)\n", hr);
             return false;
         }
 
@@ -69,7 +79,7 @@ public:
         enumerator->Release();
 
         if (FAILED(hr) || !device) {
-            fprintf(stderr, "WASAPI: Failed to get capture device (0x%08lx)\n", hr);
+            fprintf(stderr, "WASAPI capture: GetDevice failed (0x%08lx)\n", hr);
             return false;
         }
 
@@ -78,27 +88,50 @@ public:
         device->Release();
 
         if (FAILED(hr) || !client_) {
-            fprintf(stderr, "WASAPI: Failed to activate audio client (0x%08lx)\n", hr);
+            fprintf(stderr, "WASAPI capture: Activate failed (0x%08lx)\n", hr);
             return false;
         }
 
-        /* Set up desired format: float32, mono/stereo, requested rate */
-        WAVEFORMATEX fmt{};
-        fmt.wFormatTag      = WAVE_FORMAT_IEEE_FLOAT;
-        fmt.nChannels       = static_cast<WORD>(channels);
-        fmt.nSamplesPerSec  = static_cast<DWORD>(sample_rate);
-        fmt.wBitsPerSample  = 32;
-        fmt.nBlockAlign     = fmt.nChannels * fmt.wBitsPerSample / 8;
-        fmt.nAvgBytesPerSec = fmt.nSamplesPerSec * fmt.nBlockAlign;
-        fmt.cbSize          = 0;
+        /* Get the device's mix format to understand its native capabilities */
+        WAVEFORMATEX* mix_fmt = nullptr;
+        hr = client_->GetMixFormat(&mix_fmt);
+        if (FAILED(hr) || !mix_fmt) {
+            fprintf(stderr, "WASAPI capture: GetMixFormat failed (0x%08lx)\n", hr);
+            close();
+            return false;
+        }
 
-        /* 50ms buffer — enough for real-time processing */
-        REFERENCE_TIME duration = 500000;  // 50ms in 100ns units
+        fprintf(stderr, "WASAPI capture: device mix format: %d Hz, %d ch, %d bit\n",
+                (int)mix_fmt->nSamplesPerSec, (int)mix_fmt->nChannels,
+                (int)mix_fmt->wBitsPerSample);
+
+        /* Use the device's native format — we'll resample/downmix ourselves */
+        device_rate_     = static_cast<int>(mix_fmt->nSamplesPerSec);
+        device_channels_ = static_cast<int>(mix_fmt->nChannels);
+        device_bps_      = static_cast<int>(mix_fmt->wBitsPerSample);
+
+        /* Check if device format uses float or integer samples */
+        device_is_float_ = false;
+        if (mix_fmt->wFormatTag == WAVE_FORMAT_IEEE_FLOAT) {
+            device_is_float_ = true;
+        } else if (mix_fmt->wFormatTag == WAVE_FORMAT_EXTENSIBLE && mix_fmt->cbSize >= 22) {
+            WAVEFORMATEXTENSIBLE* ext = reinterpret_cast<WAVEFORMATEXTENSIBLE*>(mix_fmt);
+            // KSDATAFORMAT_SUBTYPE_IEEE_FLOAT = {00000003-0000-0010-8000-00aa00389b71}
+            static const GUID KSDATAFORMAT_SUBTYPE_IEEE_FLOAT =
+                {0x00000003, 0x0000, 0x0010, {0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71}};
+            if (IsEqualGUID(ext->SubFormat, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
+                device_is_float_ = true;
+        }
+
+        /* 50ms buffer */
+        REFERENCE_TIME duration = 500000;
 
         hr = client_->Initialize(AUDCLNT_SHAREMODE_SHARED,
-                                 0, duration, 0, &fmt, nullptr);
+                                 0, duration, 0, mix_fmt, nullptr);
+        CoTaskMemFree(mix_fmt);
+
         if (FAILED(hr)) {
-            fprintf(stderr, "WASAPI: Failed to initialize capture client (0x%08lx)\n", hr);
+            fprintf(stderr, "WASAPI capture: Initialize failed (0x%08lx)\n", hr);
             close();
             return false;
         }
@@ -106,31 +139,25 @@ public:
         hr = client_->GetService(__uuidof(IAudioCaptureClient),
                                  reinterpret_cast<void**>(&capture_));
         if (FAILED(hr) || !capture_) {
-            fprintf(stderr, "WASAPI: Failed to get capture service (0x%08lx)\n", hr);
+            fprintf(stderr, "WASAPI capture: GetService failed (0x%08lx)\n", hr);
             close();
             return false;
-        }
-
-        /* Create event for blocking reads */
-        event_ = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-        hr = client_->SetEventHandle(event_);
-        if (FAILED(hr)) {
-            /* Fallback: polling mode if event-driven not supported */
-            CloseHandle(event_);
-            event_ = nullptr;
         }
 
         hr = client_->Start();
         if (FAILED(hr)) {
-            fprintf(stderr, "WASAPI: Failed to start capture (0x%08lx)\n", hr);
+            fprintf(stderr, "WASAPI capture: Start failed (0x%08lx)\n", hr);
             close();
             return false;
         }
 
-        sample_rate_ = sample_rate;
-        channels_    = channels;
-        fprintf(stderr, "WASAPI capture: %s, %d Hz, float32\n",
-                device_id.empty() ? "(default)" : device_id.c_str(), sample_rate);
+        target_rate_     = sample_rate;
+        target_channels_ = channels;
+        resample_pos_    = 0.0;
+
+        fprintf(stderr, "WASAPI capture: opened %s, device %d Hz %d ch -> target %d Hz %d ch\n",
+                device_id.empty() ? "(default)" : device_id.c_str(),
+                device_rate_, device_channels_, target_rate_, target_channels_);
         return true;
     }
 
@@ -139,17 +166,20 @@ public:
 
         int filled = 0;
         while (filled < frames) {
+            /* If we have resampled data buffered, consume it first */
+            while (filled < frames && !resample_buf_.empty()) {
+                buffer[filled++] = resample_buf_.back();
+                resample_buf_.pop_back();
+            }
+            if (filled >= frames) break;
+
+            /* Get next packet from WASAPI */
             UINT32 packet_len = 0;
             HRESULT hr = capture_->GetNextPacketSize(&packet_len);
             if (FAILED(hr)) return -1;
 
             if (packet_len == 0) {
-                /* Wait for data */
-                if (event_) {
-                    WaitForSingleObject(event_, 100);
-                } else {
-                    Sleep(1);
-                }
+                Sleep(1);
                 continue;
             }
 
@@ -159,31 +189,24 @@ public:
             hr = capture_->GetBuffer(&data, &num_frames, &flags, nullptr, nullptr);
             if (FAILED(hr)) return -1;
 
-            int to_copy = static_cast<int>(num_frames);
-            if (filled + to_copy > frames)
-                to_copy = frames - filled;
-
+            /* Convert device format to mono float at target rate */
             if (flags & AUDCLNT_BUFFERFLAGS_SILENT) {
-                std::memset(buffer + filled, 0,
-                            static_cast<size_t>(to_copy) * sizeof(float));
+                /* Produce silence at target rate */
+                int target_frames = static_cast<int>(
+                    static_cast<double>(num_frames) * target_rate_ / device_rate_);
+                for (int i = 0; i < target_frames && filled < frames; i++)
+                    buffer[filled++] = 0.0f;
             } else {
-                const float* src = reinterpret_cast<const float*>(data);
-                if (channels_ == 1) {
-                    std::memcpy(buffer + filled, src,
-                                static_cast<size_t>(to_copy) * sizeof(float));
-                } else {
-                    /* Downmix to mono */
-                    for (int i = 0; i < to_copy; i++) {
-                        float sum = 0.0f;
-                        for (int ch = 0; ch < channels_; ch++)
-                            sum += src[i * channels_ + ch];
-                        buffer[filled + i] = sum / channels_;
-                    }
-                }
+                /* Step 1: extract mono float from device format */
+                std::vector<float> mono(num_frames);
+                extract_mono_float(data, mono.data(), static_cast<int>(num_frames));
+
+                /* Step 2: resample from device_rate_ to target_rate_ */
+                resample_into(mono.data(), static_cast<int>(num_frames),
+                              buffer, frames, filled);
             }
 
             capture_->ReleaseBuffer(num_frames);
-            filled += to_copy;
         }
         return 0;
     }
@@ -192,15 +215,76 @@ public:
         if (client_) { client_->Stop(); }
         if (capture_) { capture_->Release(); capture_ = nullptr; }
         if (client_)  { client_->Release();  client_  = nullptr; }
-        if (event_)   { CloseHandle(event_); event_   = nullptr; }
+        resample_buf_.clear();
+        resample_pos_ = 0.0;
     }
 
 private:
+    /* Extract mono float samples from the device's native format */
+    void extract_mono_float(const BYTE* data, float* out, int num_frames) {
+        for (int i = 0; i < num_frames; i++) {
+            float sum = 0.0f;
+            for (int ch = 0; ch < device_channels_; ch++) {
+                float v = 0.0f;
+                if (device_is_float_ && device_bps_ == 32) {
+                    const float* fp = reinterpret_cast<const float*>(data);
+                    v = fp[i * device_channels_ + ch];
+                } else if (device_bps_ == 16) {
+                    const int16_t* sp = reinterpret_cast<const int16_t*>(data);
+                    v = sp[i * device_channels_ + ch] / 32768.0f;
+                } else if (device_bps_ == 24) {
+                    int idx = (i * device_channels_ + ch) * 3;
+                    int32_t raw = (static_cast<int32_t>(data[idx + 2]) << 16) |
+                                  (data[idx + 1] << 8) | data[idx];
+                    if (raw & 0x800000) raw |= static_cast<int32_t>(0xFF000000);
+                    v = raw / 8388608.0f;
+                } else if (device_bps_ == 32) {
+                    const int32_t* ip = reinterpret_cast<const int32_t*>(data);
+                    v = ip[i * device_channels_ + ch] / 2147483648.0f;
+                }
+                sum += v;
+            }
+            out[i] = sum / device_channels_;
+        }
+    }
+
+    /* Resample from device rate to target rate, filling output buffer */
+    void resample_into(const float* src, int src_frames,
+                       float* dst, int dst_max, int& dst_filled) {
+        double ratio = static_cast<double>(device_rate_) / target_rate_;
+
+        while (dst_filled < dst_max) {
+            int idx = static_cast<int>(resample_pos_);
+            if (idx + 1 >= src_frames) break;
+
+            float frac = static_cast<float>(resample_pos_ - idx);
+            dst[dst_filled++] = src[idx] + frac * (src[idx + 1] - src[idx]);
+            resample_pos_ += ratio;
+        }
+
+        /* Adjust position for consumed source frames */
+        resample_pos_ -= src_frames;
+        if (resample_pos_ < 0.0) resample_pos_ = 0.0;
+
+        /* If we have leftover output capacity, buffer any remaining
+           resampled samples for the next read() call */
+        /* (position is already adjusted, leftover handled on next packet) */
+    }
+
     IAudioClient*        client_  = nullptr;
     IAudioCaptureClient* capture_ = nullptr;
-    HANDLE               event_   = nullptr;
-    int sample_rate_ = 0;
-    int channels_    = 0;
+
+    int  device_rate_     = 0;
+    int  device_channels_ = 0;
+    int  device_bps_      = 0;
+    bool device_is_float_ = false;
+
+    int    target_rate_     = 0;
+    int    target_channels_ = 0;
+    double resample_pos_    = 0.0;
+
+    /* Buffer for excess resampled samples (stored in reverse for pop_back) */
+    std::vector<float> resample_buf_;
 };
 
 /* ── WASAPI Playback ───────────────────────────────────────────────── */
@@ -217,34 +301,64 @@ public:
         HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,
                                       CLSCTX_ALL, __uuidof(IMMDeviceEnumerator),
                                       reinterpret_cast<void**>(&enumerator));
-        if (FAILED(hr)) return false;
+        if (FAILED(hr)) {
+            fprintf(stderr, "WASAPI playback: CoCreateInstance failed (0x%08lx)\n", hr);
+            return false;
+        }
 
         IMMDevice* device = nullptr;
         hr = enumerator->GetDefaultAudioEndpoint(eRender, eConsole, &device);
         enumerator->Release();
-        if (FAILED(hr) || !device) return false;
+        if (FAILED(hr) || !device) {
+            fprintf(stderr, "WASAPI playback: GetDefaultAudioEndpoint failed (0x%08lx)\n", hr);
+            return false;
+        }
 
         hr = device->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr,
                               reinterpret_cast<void**>(&client_));
         device->Release();
-        if (FAILED(hr) || !client_) return false;
+        if (FAILED(hr) || !client_) {
+            fprintf(stderr, "WASAPI playback: Activate failed (0x%08lx)\n", hr);
+            return false;
+        }
 
-        WAVEFORMATEX fmt{};
-        fmt.wFormatTag      = WAVE_FORMAT_IEEE_FLOAT;
-        fmt.nChannels       = static_cast<WORD>(channels);
-        fmt.nSamplesPerSec  = static_cast<DWORD>(sample_rate);
-        fmt.wBitsPerSample  = 32;
-        fmt.nBlockAlign     = fmt.nChannels * fmt.wBitsPerSample / 8;
-        fmt.nAvgBytesPerSec = fmt.nSamplesPerSec * fmt.nBlockAlign;
-        fmt.cbSize          = 0;
+        /* Get mix format */
+        WAVEFORMATEX* mix_fmt = nullptr;
+        hr = client_->GetMixFormat(&mix_fmt);
+        if (FAILED(hr) || !mix_fmt) {
+            fprintf(stderr, "WASAPI playback: GetMixFormat failed (0x%08lx)\n", hr);
+            close();
+            return false;
+        }
 
-        /* 100ms buffer for smooth playback */
-        REFERENCE_TIME duration = 1000000;  // 100ms in 100ns units
+        fprintf(stderr, "WASAPI playback: device mix format: %d Hz, %d ch, %d bit\n",
+                (int)mix_fmt->nSamplesPerSec, (int)mix_fmt->nChannels,
+                (int)mix_fmt->wBitsPerSample);
+
+        device_rate_     = static_cast<int>(mix_fmt->nSamplesPerSec);
+        device_channels_ = static_cast<int>(mix_fmt->nChannels);
+
+        /* Check if device uses float format */
+        device_is_float_ = false;
+        if (mix_fmt->wFormatTag == WAVE_FORMAT_IEEE_FLOAT) {
+            device_is_float_ = true;
+        } else if (mix_fmt->wFormatTag == WAVE_FORMAT_EXTENSIBLE && mix_fmt->cbSize >= 22) {
+            WAVEFORMATEXTENSIBLE* ext = reinterpret_cast<WAVEFORMATEXTENSIBLE*>(mix_fmt);
+            static const GUID KSDATAFORMAT_SUBTYPE_IEEE_FLOAT =
+                {0x00000003, 0x0000, 0x0010, {0x80,0x00,0x00,0xaa,0x00,0x38,0x9b,0x71}};
+            if (IsEqualGUID(ext->SubFormat, KSDATAFORMAT_SUBTYPE_IEEE_FLOAT))
+                device_is_float_ = true;
+        }
+
+        /* 100ms buffer */
+        REFERENCE_TIME duration = 1000000;
 
         hr = client_->Initialize(AUDCLNT_SHAREMODE_SHARED,
-                                 0, duration, 0, &fmt, nullptr);
+                                 0, duration, 0, mix_fmt, nullptr);
+        CoTaskMemFree(mix_fmt);
+
         if (FAILED(hr)) {
-            fprintf(stderr, "WASAPI: Failed to initialize playback client (0x%08lx)\n", hr);
+            fprintf(stderr, "WASAPI playback: Initialize failed (0x%08lx)\n", hr);
             close();
             return false;
         }
@@ -259,15 +373,56 @@ public:
         hr = client_->Start();
         if (FAILED(hr)) { close(); return false; }
 
-        channels_ = channels;
+        source_rate_     = sample_rate;
+        source_channels_ = channels;
+        resample_pos_    = 0.0;
+
+        fprintf(stderr, "WASAPI playback: source %d Hz %d ch -> device %d Hz %d ch\n",
+                source_rate_, source_channels_, device_rate_, device_channels_);
         return true;
     }
 
     int write(const float* buffer, int frames) override {
         if (!client_ || !render_) return -1;
 
+        /* Resample source (e.g. 16kHz mono) to device format (e.g. 48kHz stereo) */
+        double ratio = static_cast<double>(device_rate_) / source_rate_;
+        int out_frames = static_cast<int>(frames * ratio) + 2;
+        std::vector<float> resampled(static_cast<size_t>(out_frames * device_channels_));
+
+        int produced = 0;
+        for (int i = 0; i < out_frames; i++) {
+            double src_pos = resample_pos_ + i / ratio;
+            int idx = static_cast<int>(src_pos);
+            if (idx + 1 >= frames) break;
+
+            float frac = static_cast<float>(src_pos - idx);
+            float sample = buffer[idx] + frac * (buffer[idx + 1] - buffer[idx]);
+
+            /* Duplicate mono to all device channels */
+            for (int ch = 0; ch < device_channels_; ch++) {
+                if (device_is_float_) {
+                    resampled[static_cast<size_t>(produced * device_channels_ + ch)] = sample;
+                } else {
+                    /* For int16 devices, still write as float — WASAPI shared mode
+                       mix format is almost always float32 */
+                    resampled[static_cast<size_t>(produced * device_channels_ + ch)] = sample;
+                }
+            }
+            produced++;
+        }
+
+        /* Update fractional position for continuity */
+        resample_pos_ = (resample_pos_ + static_cast<double>(frames)) -
+                         static_cast<int>(resample_pos_ + static_cast<double>(frames));
+        /* Actually, track how many source samples we consumed */
+        resample_pos_ = fmod(resample_pos_ + static_cast<double>(produced) / ratio -
+                              static_cast<double>(frames), 1.0);
+        if (resample_pos_ < 0.0) resample_pos_ += 1.0;
+
+        /* Write resampled data to WASAPI buffer */
         int written = 0;
-        while (written < frames) {
+        while (written < produced) {
             UINT32 padding = 0;
             HRESULT hr = client_->GetCurrentPadding(&padding);
             if (FAILED(hr)) return -1;
@@ -278,7 +433,7 @@ public:
                 continue;
             }
 
-            UINT32 to_write = static_cast<UINT32>(frames - written);
+            UINT32 to_write = static_cast<UINT32>(produced - written);
             if (to_write > available)
                 to_write = available;
 
@@ -286,8 +441,9 @@ public:
             hr = render_->GetBuffer(to_write, &data);
             if (FAILED(hr)) return -1;
 
-            std::memcpy(data, buffer + written * channels_,
-                        static_cast<size_t>(to_write) * channels_ * sizeof(float));
+            std::memcpy(data,
+                        &resampled[static_cast<size_t>(written * device_channels_)],
+                        static_cast<size_t>(to_write) * device_channels_ * sizeof(float));
 
             render_->ReleaseBuffer(to_write, 0);
             written += static_cast<int>(to_write);
@@ -296,7 +452,6 @@ public:
     }
 
     void flush() override {
-        /* Let remaining buffer drain, then reset */
         if (client_) {
             Sleep(50);
             client_->Stop();
@@ -310,13 +465,21 @@ public:
         if (render_)  { render_->Release();  render_  = nullptr; }
         if (client_)  { client_->Release();  client_  = nullptr; }
         buffer_frames_ = 0;
+        resample_pos_  = 0.0;
     }
 
 private:
     IAudioClient*       client_ = nullptr;
     IAudioRenderClient* render_ = nullptr;
     UINT32              buffer_frames_ = 0;
-    int                 channels_ = 0;
+
+    int  device_rate_     = 0;
+    int  device_channels_ = 0;
+    bool device_is_float_ = false;
+
+    int    source_rate_     = 0;
+    int    source_channels_ = 0;
+    double resample_pos_    = 0.0;
 };
 
 /* ── Device enumeration ────────────────────────────────────────────── */

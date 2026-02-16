@@ -229,8 +229,11 @@ void RadaeDecoder::start_recording(const std::string& path)
     std::lock_guard<std::mutex> lock(rec_mutex_);
     if (rec_file_) return;
     rec_file_ = std::fopen(path.c_str(), "wb");
-    if (rec_file_)
+    if (rec_file_) {
         recording_.store(true, std::memory_order_relaxed);
+        fprintf(stderr, "Recording: %s, signed 16-bit PCM, 8000 Hz, mono\n",
+                path.c_str());
+    }
 }
 
 void RadaeDecoder::stop_recording()
@@ -709,14 +712,6 @@ void RadaeDecoder::processing_loop()
                         capture_buf[i] = capture_i16[i] / 32768.0f;
                 }
 
-                /* write raw capture to recording file */
-                if (recording_.load(std::memory_order_relaxed)) {
-                    std::lock_guard<std::mutex> lock(rec_mutex_);
-                    if (rec_file_)
-                        std::fwrite(capture_buf.data(), sizeof(float),
-                                    READ_FRAMES, rec_file_);
-                }
-
                 /* resample to 8 kHz */
                 int got = resample_linear_stream(
                     capture_buf.data(), static_cast<int>(READ_FRAMES),
@@ -730,6 +725,21 @@ void RadaeDecoder::processing_loop()
         }
 
         if (!running_.load(std::memory_order_relaxed)) break;
+
+        /* ── record 8 kHz samples before gain ─────────────────────────── */
+        if (recording_.load(std::memory_order_relaxed)) {
+            std::vector<int16_t> rec_i16(static_cast<size_t>(nin));
+            for (int i = 0; i < nin; i++) {
+                float s = acc_8k[static_cast<size_t>(i)] * 32768.0f;
+                if (s > 32767.0f) s = 32767.0f;
+                if (s < -32768.0f) s = -32768.0f;
+                rec_i16[static_cast<size_t>(i)] = static_cast<int16_t>(s);
+            }
+            std::lock_guard<std::mutex> lock(rec_mutex_);
+            if (rec_file_)
+                std::fwrite(rec_i16.data(), sizeof(int16_t),
+                            static_cast<size_t>(nin), rec_file_);
+        }
 
         /* ── apply input gain ─────────────────────────────────────────── */
         {

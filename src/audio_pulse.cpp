@@ -19,10 +19,21 @@ public:
         spec.rate     = static_cast<uint32_t>(sample_rate);
         spec.channels = static_cast<uint8_t>(channels);
 
+        /* Use a larger server-side buffer to avoid gaps in the capture
+           stream.  fragsize tells PulseAudio how much data to deliver per
+           read; we set it to match the 512-frame reads in the decoder loop
+           and allow maxlength for ~4× that so the server can buffer ahead. */
+        pa_buffer_attr attr{};
+        attr.maxlength = static_cast<uint32_t>(2048 * sizeof(float));  // 4× read size
+        attr.fragsize  = static_cast<uint32_t>(512 * sizeof(float));  // match READ_FRAMES
+        attr.tlength   = static_cast<uint32_t>(-1);  // unused for record
+        attr.prebuf    = static_cast<uint32_t>(-1);  // unused for record
+        attr.minreq    = static_cast<uint32_t>(-1);  // unused for record
+
         int err = 0;
         const char* dev = device_id.empty() ? nullptr : device_id.c_str();
         pa_ = pa_simple_new(nullptr, "FreeDV Monitor", PA_STREAM_RECORD,
-                            dev, "Capture", &spec, nullptr, nullptr, &err);
+                            dev, "Capture", &spec, nullptr, &attr, &err);
         if (!pa_) {
             fprintf(stderr, "PulseAudio capture open failed: %s\n", pa_strerror(err));
             return false;

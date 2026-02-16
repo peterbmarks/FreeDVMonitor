@@ -6,29 +6,6 @@
 #include <vector>
 #include <algorithm>
 #include <mutex>
-#ifdef __linux__
-#include <unistd.h>
-#include <fcntl.h>
-#endif
-
-static void suppress_stderr(bool suppress) {
-#ifdef __linux__
-    static int saved_fd = -1;
-    if (suppress) {
-        fflush(stderr);
-        saved_fd = dup(STDERR_FILENO);
-        int devnull = open("/dev/null", O_WRONLY);
-        if (devnull >= 0) { dup2(devnull, STDERR_FILENO); close(devnull); }
-    } else if (saved_fd >= 0) {
-        fflush(stderr);
-        dup2(saved_fd, STDERR_FILENO);
-        close(saved_fd);
-        saved_fd = -1;
-    }
-#else
-    (void)suppress;
-#endif
-}
 
 /* ── C headers from RADE / Opus (wrapped for C++ linkage) ────────────── */
 extern "C" {
@@ -243,119 +220,51 @@ void RadaeDecoder::stop_recording()
     if (rec_file_) { std::fclose(rec_file_); rec_file_ = nullptr; }
 }
 
-/* ── find_device_by_name: map PortAudio device name to index ─────────── */
-
-int RadaeDecoder::find_device_by_name(const std::string& name)
-{
-    int count = Pa_GetDeviceCount();
-    for (int i = 0; i < count; i++) {
-        const PaDeviceInfo* info = Pa_GetDeviceInfo(i);
-        if (info && info->name == name)
-            return i;
-    }
-    return paNoDevice;
-}
-
 /* ── open / close ────────────────────────────────────────────────────── */
 
 bool RadaeDecoder::open(const std::string& device_name)
 {
     close();
 
-    /* ── Initialise PortAudio ────────────────────────────────────────── */
-    suppress_stderr(true);
-    PaError pa_err = Pa_Initialize();
-    suppress_stderr(false);
-    if (pa_err != paNoError)
-        return false;
-    pa_initialized_ = true;
+    /* ── Open PulseAudio capture at 8 kHz mono float32 ────────────── */
+    pa_sample_spec cap_spec{};
+    cap_spec.format   = PA_SAMPLE_FLOAT32LE;
+    cap_spec.rate     = RADE_FS;        /* 8000 Hz — PulseAudio resamples from hardware */
+    cap_spec.channels = 1;
 
-    /* ── Look up device by name (same PA session) ────────────────────── */
-    int input_device_index = find_device_by_name(device_name);
-    if (input_device_index == paNoDevice) {
-        Pa_Terminate(); pa_initialized_ = false;
-        return false;
-    }
-
-    /* ── Determine capture sample rate ───────────────────────────────── */
-    const PaDeviceInfo* in_info = Pa_GetDeviceInfo(input_device_index);
-    if (!in_info || in_info->maxInputChannels < 1) {
-        Pa_Terminate(); pa_initialized_ = false;
+    int pa_err = 0;
+    const char* dev = device_name.empty() ? nullptr : device_name.c_str();
+    pa_in_ = pa_simple_new(nullptr, "FreeDV Monitor", PA_STREAM_RECORD,
+                           dev, "Capture", &cap_spec, nullptr, nullptr, &pa_err);
+    if (!pa_in_) {
+        fprintf(stderr, "PulseAudio capture open failed: %s\n", pa_strerror(pa_err));
         return false;
     }
 
-    /* Open capture at the device's default sample rate so the application
-       controls resampling to 8 kHz.  This avoids PipeWire/PulseAudio
-       internal resampling which can prevent RADAE modem sync.
-       Try paFloat32 first, fall back to paInt16 (universally supported). */
-    PaStreamParameters in_params{};
-    in_params.device = input_device_index;
-    in_params.channelCount = 1;
-    in_params.suggestedLatency = in_info->defaultLowInputLatency;
+    fprintf(stderr, "PulseAudio capture: %s, %u Hz, float32\n",
+            device_name.empty() ? "(default)" : device_name.c_str(),
+            cap_spec.rate);
 
-    PaError err = paFormatIsSupported + 1;  /* != paFormatIsSupported */
-    static const PaSampleFormat fmts[] = { paFloat32, paInt16 };
-    for (auto fmt : fmts) {
-        in_params.sampleFormat = fmt;
-        rate_in_ = static_cast<unsigned int>(in_info->defaultSampleRate);
-        if (Pa_IsFormatSupported(&in_params, nullptr, rate_in_) == paFormatIsSupported) {
-            err = Pa_OpenStream(&pa_in_, &in_params, nullptr,
-                                rate_in_, 512, paClipOff, nullptr, nullptr);
-            if (err == paNoError) { fmt_in_ = fmt; break; }
-        }
-    }
-    if (err != paNoError) {
-        Pa_Terminate(); pa_initialized_ = false;
-        return false;
-    }
+    /* ── Open PulseAudio playback at 16 kHz mono float32 ─────────── */
+    pa_sample_spec play_spec{};
+    play_spec.format   = PA_SAMPLE_FLOAT32LE;
+    play_spec.rate     = RADE_FS_SPEECH;  /* 16000 Hz — PulseAudio resamples to hardware */
+    play_spec.channels = 1;
 
-    fprintf(stderr, "PortAudio capture: %s, %u Hz, %s\n",
-            in_info->name, rate_in_,
-            (fmt_in_ == paFloat32) ? "float32" : "int16");
-
-    /* ── Determine playback sample rate ──────────────────────────────── */
-    int out_dev = Pa_GetDefaultOutputDevice();
-    if (out_dev == paNoDevice) {
-        Pa_CloseStream(pa_in_); pa_in_ = nullptr;
-        Pa_Terminate(); pa_initialized_ = false;
-        return false;
-    }
-    const PaDeviceInfo* out_info = Pa_GetDeviceInfo(out_dev);
-
-    PaStreamParameters out_params{};
-    out_params.device = out_dev;
-    out_params.channelCount = 1;
-    out_params.suggestedLatency = out_info->defaultHighOutputLatency;
-
-    err = paFormatIsSupported + 1;
-    for (auto fmt : fmts) {
-        out_params.sampleFormat = fmt;
-        rate_out_ = RADE_FS_SPEECH;
-        if (Pa_IsFormatSupported(nullptr, &out_params, rate_out_) == paFormatIsSupported) {
-            err = Pa_OpenStream(&pa_out_, nullptr, &out_params,
-                                rate_out_, 2048, paClipOff, nullptr, nullptr);
-            if (err == paNoError) { fmt_out_ = fmt; break; }
-        }
-        rate_out_ = static_cast<unsigned int>(out_info->defaultSampleRate);
-        if (Pa_IsFormatSupported(nullptr, &out_params, rate_out_) == paFormatIsSupported) {
-            err = Pa_OpenStream(&pa_out_, nullptr, &out_params,
-                                rate_out_, 2048, paClipOff, nullptr, nullptr);
-            if (err == paNoError) { fmt_out_ = fmt; break; }
-        }
-    }
-    if (err != paNoError) {
-        Pa_CloseStream(pa_in_); pa_in_ = nullptr;
-        Pa_Terminate(); pa_initialized_ = false;
+    pa_out_ = pa_simple_new(nullptr, "FreeDV Monitor", PA_STREAM_PLAYBACK,
+                            nullptr, "Playback", &play_spec, nullptr, nullptr, &pa_err);
+    if (!pa_out_) {
+        fprintf(stderr, "PulseAudio playback open failed: %s\n", pa_strerror(pa_err));
+        pa_simple_free(pa_in_); pa_in_ = nullptr;
         return false;
     }
 
     /* ── RADE receiver ──────────────────────────────────────────────── */
     rade_initialize();
-    rade_ = rade_open(nullptr, 0);   /* verbose=1 for diagnostics */
+    rade_ = rade_open(nullptr, 0);
     if (!rade_) {
-        Pa_CloseStream(pa_in_);  pa_in_  = nullptr;
-        Pa_CloseStream(pa_out_); pa_out_ = nullptr;
-        Pa_Terminate(); pa_initialized_ = false;
+        pa_simple_free(pa_in_);  pa_in_  = nullptr;
+        pa_simple_free(pa_out_); pa_out_ = nullptr;
         return false;
     }
 
@@ -371,10 +280,6 @@ bool RadaeDecoder::open(const std::string& device_name)
     hilbert_pos_ = 0;
     std::memset(delay_buf_, 0, sizeof(delay_buf_));
     delay_pos_ = 0;
-
-    /* ── Resampler state ────────────────────────────────────────────── */
-    resamp_in_frac_ = 0.0;
-    resamp_in_prev_ = 0.0f;
 
     /* ── Hanning window for FFT ─────────────────────────────────────── */
     for (int i = 0; i < FFT_SIZE; i++)
@@ -411,55 +316,25 @@ bool RadaeDecoder::open_file(const std::string& wav_path)
     if (file_audio_8k_.empty()) return false;
     file_pos_ = 0;
 
-    /* ── Initialise PortAudio ───────────────────────────────────── */
-    suppress_stderr(true);
-    PaError pa_err2 = Pa_Initialize();
-    suppress_stderr(false);
-    if (pa_err2 != paNoError)
-        return false;
-    pa_initialized_ = true;
+    /* ── Open PulseAudio playback at 16 kHz mono float32 ─────────── */
+    pa_sample_spec play_spec{};
+    play_spec.format   = PA_SAMPLE_FLOAT32LE;
+    play_spec.rate     = RADE_FS_SPEECH;
+    play_spec.channels = 1;
 
-    /* ── Open playback on default output ────────────────────────── */
-    int out_dev = Pa_GetDefaultOutputDevice();
-    if (out_dev == paNoDevice) {
-        Pa_Terminate(); pa_initialized_ = false;
-        return false;
-    }
-    const PaDeviceInfo* out_info = Pa_GetDeviceInfo(out_dev);
-
-    PaStreamParameters out_params{};
-    out_params.device = out_dev;
-    out_params.channelCount = 1;
-    out_params.suggestedLatency = out_info->defaultHighOutputLatency;
-
-    static const PaSampleFormat fmts[] = { paFloat32, paInt16 };
-    PaError err = paFormatIsSupported + 1;
-    for (auto fmt : fmts) {
-        out_params.sampleFormat = fmt;
-        rate_out_ = RADE_FS_SPEECH;
-        if (Pa_IsFormatSupported(nullptr, &out_params, rate_out_) == paFormatIsSupported) {
-            err = Pa_OpenStream(&pa_out_, nullptr, &out_params,
-                                rate_out_, 2048, paClipOff, nullptr, nullptr);
-            if (err == paNoError) { fmt_out_ = fmt; break; }
-        }
-        rate_out_ = static_cast<unsigned int>(out_info->defaultSampleRate);
-        if (Pa_IsFormatSupported(nullptr, &out_params, rate_out_) == paFormatIsSupported) {
-            err = Pa_OpenStream(&pa_out_, nullptr, &out_params,
-                                rate_out_, 2048, paClipOff, nullptr, nullptr);
-            if (err == paNoError) { fmt_out_ = fmt; break; }
-        }
-    }
-    if (err != paNoError) {
-        Pa_Terminate(); pa_initialized_ = false;
+    int pa_err = 0;
+    pa_out_ = pa_simple_new(nullptr, "FreeDV Monitor", PA_STREAM_PLAYBACK,
+                            nullptr, "Playback", &play_spec, nullptr, nullptr, &pa_err);
+    if (!pa_out_) {
+        fprintf(stderr, "PulseAudio playback open failed: %s\n", pa_strerror(pa_err));
         return false;
     }
 
     /* ── RADE receiver ──────────────────────────────────────────── */
     rade_initialize();
-    rade_ = rade_open(nullptr, 0);   /* verbose=1 for diagnostics */
+    rade_ = rade_open(nullptr, 0);
     if (!rade_) {
-        Pa_CloseStream(pa_out_); pa_out_ = nullptr;
-        Pa_Terminate(); pa_initialized_ = false;
+        pa_simple_free(pa_out_); pa_out_ = nullptr;
         return false;
     }
 
@@ -482,7 +357,6 @@ bool RadaeDecoder::open_file(const std::string& wav_path)
     std::memset(spectrum_mag_, 0, sizeof(spectrum_mag_));
 
     file_mode_ = true;
-    rate_in_ = RADE_FS;
 
     return true;
 }
@@ -495,10 +369,8 @@ void RadaeDecoder::close()
     if (rade_) { rade_close(rade_); rade_ = nullptr; }
     if (fargan_) { delete static_cast<FARGANState*>(fargan_); fargan_ = nullptr; }
 
-    if (pa_in_)  { Pa_CloseStream(pa_in_);  pa_in_  = nullptr; }
-    if (pa_out_) { Pa_CloseStream(pa_out_); pa_out_ = nullptr; }
-
-    if (pa_initialized_) { Pa_Terminate(); pa_initialized_ = false; }
+    if (pa_in_)  { pa_simple_free(pa_in_);  pa_in_  = nullptr; }
+    if (pa_out_) { pa_simple_free(pa_out_); pa_out_ = nullptr; }
 
     file_audio_8k_.clear();
     file_audio_8k_.shrink_to_fit();
@@ -518,10 +390,6 @@ void RadaeDecoder::start()
 {
     if ((!pa_in_ && !file_mode_) || !pa_out_ || !rade_ || running_) return;
 
-    /* Start the PortAudio streams */
-    if (pa_in_)  Pa_StartStream(pa_in_);
-    if (pa_out_) Pa_StartStream(pa_out_);
-
     running_ = true;
     thread_  = std::thread(&RadaeDecoder::processing_loop, this);
 }
@@ -533,9 +401,8 @@ void RadaeDecoder::stop()
 
     if (thread_.joinable()) thread_.join();
 
-    /* Stop the PortAudio streams (after thread exits to avoid data race) */
-    if (pa_in_)  Pa_AbortStream(pa_in_);
-    if (pa_out_) Pa_AbortStream(pa_out_);
+    /* Flush any remaining playback data */
+    if (pa_out_) pa_simple_flush(pa_out_, nullptr);
 
     input_level_  = 0.0f;
     output_level_ = 0.0f;
@@ -579,49 +446,6 @@ static void hilbert_process(const float* in, RADE_COMP* out, int n,
     }
 }
 
-/* ── streaming linear-interpolation resampler ────────────────────────
- *
- *  Converts from rate_in to rate_out.  Maintains fractional position
- *  across calls via frac and prev.
- *  Returns number of output samples written.
- * ──────────────────────────────────────────────────────────────────── */
-
-static int resample_linear_stream(const float* in, int n_in,
-                                  float* out, int max_out,
-                                  unsigned int rate_in, unsigned int rate_out,
-                                  double& frac, float& prev)
-{
-    if (rate_in == rate_out) {
-        int n = std::min(n_in, max_out);
-        std::memcpy(out, in, static_cast<size_t>(n) * sizeof(float));
-        if (n_in > 0) prev = in[n_in - 1];
-        return n;
-    }
-
-    double step = static_cast<double>(rate_in) / static_cast<double>(rate_out);
-    int n_out = 0;
-
-    while (n_out < max_out) {
-        int idx = static_cast<int>(frac);
-        if (idx >= n_in) break;
-
-        float f = static_cast<float>(frac - idx);
-        float s0 = (idx == 0) ? prev : in[idx - 1];
-        float s1 = in[idx];
-        out[n_out++] = s0 + f * (s1 - s0);
-
-        frac += step;
-    }
-
-    /* save last sample for next block interpolation */
-    if (n_in > 0) prev = in[n_in - 1];
-
-    /* adjust frac so it's relative to the next block */
-    frac -= n_in;
-
-    return n_out;
-}
-
 /* ── processing loop (dedicated thread) ──────────────────────────────── */
 
 void RadaeDecoder::processing_loop()
@@ -639,36 +463,9 @@ void RadaeDecoder::processing_loop()
     std::vector<float> acc_8k;
     acc_8k.reserve(static_cast<size_t>(nin_max * 2));
 
-    /* capture read buffer (at rate_in_) */
-    constexpr unsigned long READ_FRAMES = 512;
+    /* capture read buffer (already at 8 kHz from PulseAudio) */
+    constexpr int READ_FRAMES = 512;
     std::vector<float> capture_buf(READ_FRAMES);
-    std::vector<int16_t> capture_i16;  // only used when fmt_in_ == paInt16
-    if (fmt_in_ == paInt16) capture_i16.resize(READ_FRAMES);
-
-    /* temporary buffer for resampled input */
-    int resamp_out_max = static_cast<int>(READ_FRAMES) + 2;
-    std::vector<float> resamp_tmp(static_cast<size_t>(resamp_out_max));
-
-    /* helper to write float samples, converting to int16 if needed */
-    std::vector<int16_t> out_i16;
-    auto write_output = [&](const float* data, unsigned long frames) {
-        if (fmt_out_ == paInt16) {
-            if (out_i16.size() < frames) out_i16.resize(frames);
-            for (unsigned long i = 0; i < frames; i++) {
-                float s = data[i] * 32768.0f;
-                if (s > 32767.0f) s = 32767.0f;
-                if (s < -32768.0f) s = -32768.0f;
-                out_i16[i] = static_cast<int16_t>(s);
-            }
-            Pa_WriteStream(pa_out_, out_i16.data(), frames);
-        } else {
-            Pa_WriteStream(pa_out_, data, frames);
-        }
-    };
-
-    /* output resample state (16 kHz → rate_out_) */
-    double resamp_out_frac = 0.0;
-    float  resamp_out_prev = 0.0f;
 
     bool was_synced = false;
     bool output_primed = false;
@@ -695,32 +492,20 @@ void RadaeDecoder::processing_loop()
                               file_audio_8k_.begin() + static_cast<ptrdiff_t>(file_pos_ + chunk));
                 file_pos_ += chunk;
             } else {
-                /* ── live mode: read from PortAudio capture ────────── */
-                void* read_ptr = (fmt_in_ == paInt16)
-                    ? static_cast<void*>(capture_i16.data())
-                    : static_cast<void*>(capture_buf.data());
-                PaError pa_err = Pa_ReadStream(pa_in_, read_ptr, READ_FRAMES);
-                if (pa_err != paNoError && pa_err != paInputOverflowed) {
+                /* ── live mode: read from PulseAudio capture ────────── */
+                int pa_err = 0;
+                int ret = pa_simple_read(pa_in_, capture_buf.data(),
+                                         READ_FRAMES * sizeof(float), &pa_err);
+                if (ret < 0) {
                     if (!running_.load(std::memory_order_relaxed)) break;
+                    fprintf(stderr, "PulseAudio read error: %s\n", pa_strerror(pa_err));
                     running_ = false;
                     break;
                 }
 
-                /* convert to float32 if needed */
-                if (fmt_in_ == paInt16) {
-                    for (unsigned long i = 0; i < READ_FRAMES; i++)
-                        capture_buf[i] = capture_i16[i] / 32768.0f;
-                }
-
-                /* resample to 8 kHz */
-                int got = resample_linear_stream(
-                    capture_buf.data(), static_cast<int>(READ_FRAMES),
-                    resamp_tmp.data(), resamp_out_max,
-                    rate_in_, RADE_FS,
-                    resamp_in_frac_, resamp_in_prev_);
-
-                acc_8k.insert(acc_8k.end(), resamp_tmp.begin(),
-                              resamp_tmp.begin() + got);
+                /* Already at 8 kHz float32 — append directly */
+                acc_8k.insert(acc_8k.end(), capture_buf.begin(),
+                              capture_buf.begin() + READ_FRAMES);
             }
         }
 
@@ -847,11 +632,11 @@ void RadaeDecoder::processing_loop()
                         /* pre-fill output buffer with silence so it has
                            enough headroom for the bursty write pattern */
                         if (!output_primed) {
-                            int prefill = 2 * 12 * LPCNET_FRAME_SIZE
-                                * static_cast<int>(rate_out_) / RADE_FS_SPEECH;
+                            int prefill = 2 * 12 * LPCNET_FRAME_SIZE;
                             std::vector<float> silence(static_cast<size_t>(prefill), 0.0f);
-                            write_output(silence.data(),
-                                         static_cast<unsigned long>(prefill));
+                            pa_simple_write(pa_out_, silence.data(),
+                                            static_cast<size_t>(prefill) * sizeof(float),
+                                            nullptr);
                             output_primed = true;
                         }
                     }
@@ -868,20 +653,11 @@ void RadaeDecoder::processing_loop()
                     rms_sum += static_cast<double>(fpcm[s]) * fpcm[s];
                 rms_n += LPCNET_FRAME_SIZE;
 
-                /* ── resample 16 kHz → output rate & write ────────────── */
-                int out_max = LPCNET_FRAME_SIZE * static_cast<int>(rate_out_) / RADE_FS_SPEECH + 4;
-                std::vector<float> out_f(static_cast<size_t>(out_max));
-
-                int n_resamp = resample_linear_stream(
-                    fpcm, LPCNET_FRAME_SIZE,
-                    out_f.data(), out_max,
-                    RADE_FS_SPEECH, rate_out_,
-                    resamp_out_frac, resamp_out_prev);
-
-                /* write samples to PortAudio output */
-                if (n_resamp > 0 && running_.load(std::memory_order_relaxed)) {
-                    write_output(out_f.data(),
-                                 static_cast<unsigned long>(n_resamp));
+                /* ── write 16 kHz speech to PulseAudio output ──────────── */
+                if (running_.load(std::memory_order_relaxed)) {
+                    pa_simple_write(pa_out_, fpcm,
+                                    LPCNET_FRAME_SIZE * sizeof(float),
+                                    nullptr);
                 }
             }
 

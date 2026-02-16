@@ -5,7 +5,8 @@
 #include <atomic>
 #include <mutex>
 #include <thread>
-#include <portaudio.h>
+#include <pulse/simple.h>
+#include <pulse/error.h>
 
 /* Forward declaration — avoids exposing RADE/FARGAN C headers in this header */
 struct rade;
@@ -13,8 +14,9 @@ struct rade;
 /* ── RadaeDecoder ──────────────────────────────────────────────────────────
  *
  *  Real-time RADAE decoder pipeline:
- *    PortAudio capture → resample → Hilbert → RADE Rx → FARGAN → resample → PortAudio playback
+ *    PulseAudio capture → Hilbert → RADE Rx → FARGAN → PulseAudio playback
  *
+ *  PulseAudio handles resampling (capture at 8 kHz, playback at 16 kHz).
  *  All processing runs on a dedicated thread.  Status is exposed via atomics.
  * ──────────────────────────────────────────────────────────────────────── */
 
@@ -24,7 +26,7 @@ public:
     ~RadaeDecoder();
 
     /* lifecycle -------------------------------------------------------------- */
-    bool open(const std::string& device_name);
+    bool open(const std::string& device_name);   // device_name = PulseAudio source name
     bool open_file(const std::string& wav_path);
     void close();
     void start();
@@ -54,20 +56,12 @@ public:
     void stop_recording();
     bool is_recording() const { return recording_.load(std::memory_order_relaxed); }
 
-    /* helper: find PortAudio device index by name */
-    static int find_device_by_name(const std::string& name);
-
 private:
     void processing_loop();
 
-    /* ── PortAudio streams ───────────────────────────────────────────────── */
-    PaStream*     pa_in_   = nullptr;
-    PaStream*     pa_out_  = nullptr;
-    unsigned int  rate_in_  = 0;   // capture sample rate
-    unsigned int  rate_out_ = 0;   // playback sample rate
-    PaSampleFormat fmt_in_  = paFloat32;  // capture sample format
-    PaSampleFormat fmt_out_ = paFloat32;  // playback sample format
-    bool          pa_initialized_ = false;
+    /* ── PulseAudio streams ─────────────────────────────────────────────── */
+    pa_simple*    pa_in_   = nullptr;
+    pa_simple*    pa_out_  = nullptr;
 
     /* ── RADE receiver (opaque) ───────────────────────────────────────────── */
     struct rade*  rade_     = nullptr;
@@ -87,10 +81,6 @@ private:
     bool  fargan_ready_    = false;
     int   warmup_count_    = 0;
     float warmup_buf_[5 * 36] = {};   // 5 frames × NB_TOTAL_FEATURES
-
-    /* ── Resampler state (input) ──────────────────────────────────────────── */
-    double resamp_in_frac_ = 0.0;   // fractional sample position for input resampler
-    float  resamp_in_prev_ = 0.0f;  // previous input sample for linear interpolation
 
     /* ── Delay buffer for Hilbert real part ────────────────────────────────── */
     float delay_buf_[HILBERT_NTAPS] = {};

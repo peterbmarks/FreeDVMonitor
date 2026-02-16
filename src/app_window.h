@@ -2,6 +2,8 @@
 #define APP_WINDOW_H
 
 #include <gtk/gtk.h>
+#include <vector>
+#include <string>
 #include "rade_decoder.h"
 
 struct AppWindow {
@@ -15,6 +17,9 @@ struct AppWindow {
     guint statusbar_context;
 
     RadaeDecoder decoder;
+
+    // PulseAudio source names (parallel to combo box entries)
+    std::vector<std::string> pulse_source_names;
 
     // Input gain slider
     GtkWidget *gain_slider         = nullptr;

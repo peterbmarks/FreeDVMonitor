@@ -1,40 +1,12 @@
 #include "app_window.h"
-#include <portaudio.h>
+#include <pulse/pulseaudio.h>
 #include <string>
 #include <cstring>
 #include <cmath>
-#ifdef __linux__
-#include <unistd.h>
-#include <fcntl.h>
-#endif
 #ifdef _WIN32
 #include <windows.h>
 #include <commdlg.h>
 #endif
-
-// Suppress noisy ALSA warnings on Linux (e.g. "Unable to find definition")
-static int saved_stderr_fd = -1;
-
-static void suppress_stderr(bool suppress) {
-#ifdef __linux__
-    if (suppress) {
-        fflush(stderr);
-        saved_stderr_fd = dup(STDERR_FILENO);
-        int devnull = open("/dev/null", O_WRONLY);
-        if (devnull >= 0) {
-            dup2(devnull, STDERR_FILENO);
-            close(devnull);
-        }
-    } else if (saved_stderr_fd >= 0) {
-        fflush(stderr);
-        dup2(saved_stderr_fd, STDERR_FILENO);
-        close(saved_stderr_fd);
-        saved_stderr_fd = -1;
-    }
-#else
-    (void)suppress;
-#endif
-}
 
 /* ── Configuration persistence ─────────────────────────────────────── */
 
@@ -293,56 +265,137 @@ static void on_gain_slider_changed(GtkRange *range, gpointer data) {
     config_save_input_gain(dB);
 }
 
-/* ── Audio device helpers ──────────────────────────────────────────── */
+/* ── PulseAudio source enumeration ─────────────────────────────────── */
+
+struct PulseEnumData {
+    std::vector<std::string> names;          // PulseAudio internal names
+    std::vector<std::string> descriptions;   // human-readable descriptions
+    pa_threaded_mainloop *ml;
+};
+
+static void source_info_cb(pa_context * /*ctx*/, const pa_source_info *info,
+                           int eol, void *userdata)
+{
+    auto *data = static_cast<PulseEnumData *>(userdata);
+    if (eol > 0) {
+        pa_threaded_mainloop_signal(data->ml, 0);
+        return;
+    }
+    if (!info) return;
+
+    // Skip monitor sources (they capture playback output, not real inputs)
+    if (info->monitor_of_sink != PA_INVALID_INDEX)
+        return;
+
+    data->names.emplace_back(info->name);
+    data->descriptions.emplace_back(info->description ? info->description : info->name);
+}
+
+static void context_state_cb(pa_context *ctx, void *userdata)
+{
+    auto *ml = static_cast<pa_threaded_mainloop *>(userdata);
+    pa_context_state_t state = pa_context_get_state(ctx);
+    if (state == PA_CONTEXT_READY || state == PA_CONTEXT_FAILED ||
+        state == PA_CONTEXT_TERMINATED)
+        pa_threaded_mainloop_signal(ml, 0);
+}
 
 static void populate_audio_inputs(AppWindow *win) {
     gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(win->audio_combo));
+    win->pulse_source_names.clear();
 
-    suppress_stderr(true);
-    PaError err = Pa_Initialize();
-    suppress_stderr(false);
-    if (err != paNoError) {
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->audio_combo),
-                                       "(PortAudio init failed)");
-        gtk_combo_box_set_active(GTK_COMBO_BOX(win->audio_combo), 0);
+    PulseEnumData enum_data{};
+
+    pa_threaded_mainloop *ml = pa_threaded_mainloop_new();
+    if (!ml) goto fallback;
+
+    enum_data.ml = ml;
+
+    {
+        pa_mainloop_api *api = pa_threaded_mainloop_get_api(ml);
+        pa_context *ctx = pa_context_new(api, "FreeDV Monitor");
+        if (!ctx) {
+            pa_threaded_mainloop_free(ml);
+            goto fallback;
+        }
+
+        pa_context_set_state_callback(ctx, context_state_cb, ml);
+
+        pa_threaded_mainloop_lock(ml);
+        pa_threaded_mainloop_start(ml);
+
+        pa_context_connect(ctx, nullptr, PA_CONTEXT_NOFLAGS, nullptr);
+
+        // Wait for context to become ready
+        while (true) {
+            pa_context_state_t state = pa_context_get_state(ctx);
+            if (state == PA_CONTEXT_READY) break;
+            if (state == PA_CONTEXT_FAILED || state == PA_CONTEXT_TERMINATED) {
+                pa_context_unref(ctx);
+                pa_threaded_mainloop_unlock(ml);
+                pa_threaded_mainloop_stop(ml);
+                pa_threaded_mainloop_free(ml);
+                goto fallback;
+            }
+            pa_threaded_mainloop_wait(ml);
+        }
+
+        // Enumerate sources
+        pa_operation *op = pa_context_get_source_info_list(ctx, source_info_cb, &enum_data);
+        while (pa_operation_get_state(op) == PA_OPERATION_RUNNING)
+            pa_threaded_mainloop_wait(ml);
+        pa_operation_unref(op);
+
+        pa_context_disconnect(ctx);
+        pa_context_unref(ctx);
+
+        pa_threaded_mainloop_unlock(ml);
+        pa_threaded_mainloop_stop(ml);
+        pa_threaded_mainloop_free(ml);
+    }
+
+    {
+        std::string saved = config_load_audio_device();
+        int saved_index = -1;
+
+        for (size_t i = 0; i < enum_data.names.size(); i++) {
+            gtk_combo_box_text_append_text(
+                GTK_COMBO_BOX_TEXT(win->audio_combo),
+                enum_data.descriptions[i].c_str());
+            win->pulse_source_names.push_back(enum_data.names[i]);
+            if (!saved.empty() && saved == enum_data.names[i])
+                saved_index = static_cast<int>(i);
+        }
+
+        if (enum_data.names.empty()) {
+            gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->audio_combo),
+                                           "(no input devices found)");
+            win->pulse_source_names.emplace_back("");
+        }
+        gtk_combo_box_set_active(GTK_COMBO_BOX(win->audio_combo),
+                                 saved_index >= 0 ? saved_index : 0);
         return;
     }
 
-    std::string saved = config_load_audio_device();
-    int saved_index = -1;
-
-    int count = Pa_GetDeviceCount();
-    int added = 0;
-    for (int i = 0; i < count; i++) {
-        const PaDeviceInfo *info = Pa_GetDeviceInfo(i);
-        if (info && info->maxInputChannels > 0) {
-            gtk_combo_box_text_append_text(
-                GTK_COMBO_BOX_TEXT(win->audio_combo), info->name);
-            if (!saved.empty() && saved == info->name)
-                saved_index = added;
-            added++;
-        }
-    }
-
-    Pa_Terminate();
-
-    if (added == 0) {
-        gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->audio_combo),
-                                       "(no input devices found)");
-    }
-    gtk_combo_box_set_active(GTK_COMBO_BOX(win->audio_combo),
-                             saved_index >= 0 ? saved_index : 0);
+fallback:
+    gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(win->audio_combo),
+                                   "(PulseAudio not available)");
+    win->pulse_source_names.emplace_back("");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(win->audio_combo), 0);
 }
 
 static void on_audio_combo_changed(GtkComboBox *combo, gpointer data) {
     auto *win = static_cast<AppWindow *>(data);
     gchar *text = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo));
     if (text) {
+        int idx = gtk_combo_box_get_active(combo);
+        if (idx >= 0 && idx < static_cast<int>(win->pulse_source_names.size())) {
+            config_save_audio_device(win->pulse_source_names[idx].c_str());
+        }
         std::string msg = "Audio input: ";
         msg += text;
         gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
                            msg.c_str());
-        config_save_audio_device(text);
         g_free(text);
     }
 }
@@ -372,16 +425,15 @@ static void on_start_clicked(GtkWidget * /*widget*/, gpointer data) {
         return;
     }
 
-    gchar *text = gtk_combo_box_text_get_active_text(
-        GTK_COMBO_BOX_TEXT(win->audio_combo));
-    if (!text) {
+    int idx = gtk_combo_box_get_active(GTK_COMBO_BOX(win->audio_combo));
+    if (idx < 0 || idx >= static_cast<int>(win->pulse_source_names.size()) ||
+        win->pulse_source_names[idx].empty()) {
         gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,
                            "No audio input selected");
         return;
     }
 
-    std::string dev_name(text);
-    g_free(text);
+    std::string dev_name = win->pulse_source_names[idx];
 
     if (!win->decoder.open(dev_name)) {
         gtk_statusbar_push(GTK_STATUSBAR(win->statusbar), win->statusbar_context,

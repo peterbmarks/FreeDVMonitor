@@ -180,14 +180,14 @@ else()
     # Native build: use system GTK3 via pkg-config
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
-    pkg_check_modules(PORTAUDIO REQUIRED portaudio-2.0)
+    pkg_check_modules(PULSE REQUIRED libpulse-simple libpulse)
 
     target_include_directories(${PROJECT_NAME} PRIVATE
-        ${GTK3_INCLUDE_DIRS} ${PORTAUDIO_INCLUDE_DIRS})
+        ${GTK3_INCLUDE_DIRS} ${PULSE_INCLUDE_DIRS})
     target_link_directories(${PROJECT_NAME} PRIVATE
-        ${GTK3_LIBRARY_DIRS} ${PORTAUDIO_LIBRARY_DIRS})
+        ${GTK3_LIBRARY_DIRS} ${PULSE_LIBRARY_DIRS})
     target_link_libraries(${PROJECT_NAME} PRIVATE
-        ${GTK3_LIBRARIES} ${PORTAUDIO_LIBRARIES})
+        ${GTK3_LIBRARIES} ${PULSE_LIBRARIES})
     target_compile_options(${PROJECT_NAME} PRIVATE
-        ${GTK3_CFLAGS_OTHER} ${PORTAUDIO_CFLAGS_OTHER})
+        ${GTK3_CFLAGS_OTHER} ${PULSE_CFLAGS_OTHER})
 endif()
